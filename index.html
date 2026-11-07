@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spear Upgrade — Caveman Hunt</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗡️</text></svg>">
+<meta name="theme-color" content="#38bdf8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; font-family:'Fredoka','Comic Sans MS','Chalkboard SE','Comic Neue',cursive; background:linear-gradient(180deg,#38bdf8 0%,#7dd3fc 38%,#86efac 38.5%,#22c55e 100%); background-attachment:fixed; color:#1c1917; display:flex; justify-content:center; padding:16px; }
+  main { width:min(100%,1240px); }
+  h1 { margin:0; font-size:2.4rem; letter-spacing:1px; color:#fff; transform:rotate(-2deg); text-shadow:-2px -2px 0 #1c1917,2px -2px 0 #1c1917,-2px 2px 0 #1c1917,2px 2px 0 #1c1917,0 5px 0 #1c1917; }
+  .sub { color:#1c1917; margin:8px 0 12px; font-size:.95rem; font-weight:600; background:#fef9c3; display:inline-block; padding:4px 14px; border:3px solid #1c1917; border-radius:14px; transform:rotate(1deg); box-shadow:3px 3px 0 #1c1917; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  .badges { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .badge { background:#fff; border:3px solid #1c1917; border-radius:20px; padding:4px 12px; font-weight:700; font-size:.85rem; box-shadow:2px 2px 0 #1c1917; }
+  .layout { display:grid; grid-template-columns: 1fr 2.6fr 1fr; gap:14px; margin-top:12px; }
+  @media (max-width:760px){ .layout{grid-template-columns:1fr;} }
+  .card { background:#fffbeb; border:3px solid #1c1917; border-radius:20px; padding:12px; box-shadow:5px 5px 0 #1c1917; }
+  .card h2 { margin:0 0 8px; font-size:1.1rem; color:#b45309; }
+  .sprite { display:inline-block; font-size:150px; text-align:center; line-height:1.2; filter:drop-shadow(0 4px 0 rgba(0,0,0,.25)); animation: bounce 1.2s ease-in-out infinite; }
+  .boss .sprite { font-size:200px; animation: wobble .5s ease-in-out infinite; }
+  .boss .sprite svg { width:190px; }
+  @keyframes bounce { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }
+  @keyframes wobble { 0%,100%{transform:rotate(-7deg) scale(1)} 50%{transform:rotate(7deg) scale(1.08)} }
+  .sprite.lunge { animation: lunge .3s; }
+  @keyframes lunge { 40%{transform:translateX(110px) scale(1.25) rotate(12deg)} }
+  .sprite.squash { animation: squash .35s; }
+  @keyframes squash { 30%{transform:scale(1.35,.6)} 60%{transform:scale(.8,1.25)} }
+  .hpbar { height:18px; background:#fff; border:3px solid #1c1917; border-radius:12px; overflow:hidden; margin:8px 0; }
+  .hpfill { height:100%; transition:width .25s; }
+  .php { background:linear-gradient(90deg,#22c55e,#4ade80); }
+  .ehp { background:linear-gradient(90deg,#ef4444,#f87171); }
+  .stat { font-size:.9rem; margin:2px 0; color:#44403c; }
+  .stat b { color:#1c1917; }
+  #arena { text-align:center; position:relative; overflow:hidden; }
+  #islandBanner { font-weight:700; font-size:1.05rem; color:#0c4a6e; background:#fff; display:inline-block; padding:2px 14px; border:3px solid #1c1917; border-radius:14px; margin-bottom:6px; transform:rotate(-1deg); }
+  #enemyName { font-size:2.2rem; font-weight:700; color:#1c1917; }
+  #enemyName.bossName { color:#dc2626; animation: blink 0.8s infinite alternate; }
+  @keyframes blink { from{opacity:1; transform:scale(1)} to{opacity:.65; transform:scale(1.06)} }
+  #vs { font-size:2.2rem; margin:4px 0; animation: bounce .8s ease-in-out infinite; }
+  #log { height:150px; overflow-y:auto; background:#fff; border:3px solid #1c1917; border-radius:14px; padding:8px; font-size:.85rem; margin-top:8px; }
+  #log div { margin:2px 0; }
+  .btn { border:3px solid #1c1917; border-radius:14px; padding:10px 14px; font:inherit; font-weight:700; cursor:pointer; margin:4px 4px 4px 0; box-shadow:0 4px 0 #1c1917; transition:transform .05s; }
+  .btn:active:not(:disabled){ transform:translateY(4px); box-shadow:none; }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .attack { background:#ef4444; color:#fff; font-size:1.4rem; width:100%; text-shadow:2px 2px 0 #1c1917; }
+  .attack:hover:not(:disabled){ background:#f87171; }
+  .heal { background:#22c55e; color:#fff; }
+  .craft { background:#f59e0b; color:#fff; font-size:.85rem; }
+  .tame { background:#a855f7; color:#fff; font-size:.85rem; }
+  .ghost { background:#fff; color:#1c1917; font-size:.8rem; }
+  .tabs { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .tab { background:#fff; color:#1c1917; border:3px solid #1c1917; border-radius:14px 14px 0 0; border-bottom:none; padding:8px 14px; cursor:pointer; font-weight:700; font-family:inherit; }
+  .tab.active { background:#fbbf24; transform:rotate(-1deg); }
+  .panel { background:#fffbeb; border:3px solid #1c1917; border-radius:0 18px 18px 18px; padding:12px; min-height:180px; box-shadow:5px 5px 0 #1c1917; }
+  .row { display:flex; justify-content:space-between; align-items:center; background:#fef9c3; border:2px solid #1c1917; border-radius:12px; padding:8px; margin:6px 0; gap:8px; flex-wrap:wrap;}
+  .row small { color:#78716c; display:block; }
+  .shake { animation: shake .3s; }
+  @keyframes shake { 0%,100%{transform:translateX(0) rotate(0)} 25%{transform:translateX(-8px) rotate(-2deg)} 75%{transform:translateX(8px) rotate(2deg)} }
+  .float-dmg { position:absolute; font-weight:700; font-size:2.6rem; pointer-events:none; animation: floatUp 1s forwards; z-index:5; -webkit-text-stroke:1px #1c1917; paint-order:stroke fill; text-shadow:2px 2px 0 #1c1917; white-space:nowrap; }
+  @keyframes floatUp { 0%{transform:scale(.4)} 25%{transform:scale(1.25)} to { transform:translateY(-70px) scale(1); opacity:0; } }
+  .disguise { color:#0e7490; font-size:.85rem; font-weight:600; }
+  #stage { position:relative; border:4px solid #1c1917; border-radius:18px; overflow:hidden; background:linear-gradient(180deg,#57534e 0 34px,#a8a29e 34px 128px,#e0c88f 128px 100%); margin:8px 0; min-height:430px; }
+  .wall { background:repeating-linear-gradient(90deg,#78716c 0 30px,#57534e 30px 33px); color:#fef9c3; font-weight:700; letter-spacing:2px; padding:4px; border-bottom:3px solid #1c1917; position:relative; z-index:2; }
+  .crowd { background:linear-gradient(180deg,#a8a29e,#78716c); border-bottom:3px solid #1c1917; }
+  .torch { position:absolute; top:40px; font-size:1.9rem; z-index:3; animation: flick .3s infinite alternate; filter:drop-shadow(0 0 8px #f59e0b); }
+  .torch.left { left:8px; } .torch.right { right:8px; }
+  @keyframes flick { from{transform:scale(1) rotate(-5deg)} to{transform:scale(1.18) rotate(5deg)} }
+  .sprite svg { width:150px; height:auto; display:block; }
+  .shadow { width:130px; height:15px; background:rgba(28,25,23,.28); border-radius:50%; margin-top:-12px; }
+  .pack { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width:240px; margin-top:6px; min-height:12px; }
+  .pet { display:flex; flex-direction:column; align-items:center; font-size:54px; line-height:1.1; animation: petBounce 1s ease-in-out infinite; filter:drop-shadow(0 2px 0 rgba(0,0,0,.25)); }
+  .pet .face, #eSprite .face { display:inline-block; transform:scaleX(-1); }
+  .pet svg { display:block; height:auto; }
+  .pet small { font-size:11px; font-weight:700; background:#fff; border:2px solid #1c1917; border-radius:8px; padding:0 5px; line-height:1.4; }
+  @keyframes petBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  .pet.hop { animation: petHop .45s; }
+  @keyframes petHop { 40%{transform:translateY(-24px) scale(1.2) rotate(8deg)} }
+  .crowd { font-size:1.5rem; letter-spacing:3px; padding-top:6px; animation: crowdJump .6s ease-in-out infinite; position:relative; z-index:2; }
+  @keyframes crowdJump { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  .cloud { position:absolute; top:0; font-size:1.4rem; opacity:.9; animation: drift 11s linear infinite; z-index:1; }
+  .cloud.c1 { left:-12%; }
+  .cloud.c2 { left:-32%; animation-delay:-5s; font-size:1rem; }
+  @keyframes drift { to { transform:translateX(420px); } }
+  .fighters { display:flex; align-items:flex-end; justify-content:space-around; padding:20px 8px 0; position:relative; z-index:2; min-height:330px; margin-bottom:-58px; }
+  .fighter { display:flex; flex-direction:column; align-items:center; }
+  .fname { background:#fff; border:3px solid #1c1917; border-radius:12px; font-size:1.05rem; font-weight:700; padding:2px 14px; max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .minibar { width:210px; height:20px; background:#fff; border:3px solid #1c1917; border-radius:10px; overflow:hidden; margin:6px 0 2px; }
+  .minifill { height:100%; transition:width .25s; }
+  #stage #vs { align-self:center; }
+  .ground { height:96px; background:radial-gradient(ellipse 62% 72% at 50% 42%, #f3e2b3 0 62%, rgba(0,0,0,0) 63%), repeating-linear-gradient(90deg,#d9b77c 0 26px,#cfa96e 26px 52px); border-top:4px solid #1c1917; }
+  @media (max-width:760px){
+    h1 { font-size:1.6rem; }
+    #enemyName { font-size:1.3rem; }
+    .sprite { font-size:88px; }
+    .sprite svg { width:92px; }
+    .boss .sprite { font-size:110px; }
+    .boss .sprite svg { width:110px; }
+    #stage { min-height:300px; }
+    .fighters { min-height:210px; padding:8px 2px 0; margin-bottom:-40px; }
+    .minibar { width:120px; height:14px; }
+    .fname { font-size:.72rem; max-width:128px; }
+    #stage #vs { font-size:1.4rem; }
+    .ground { height:64px; }
+    .pack { max-width:160px; }
+    .pet svg { max-width:64px; }
+    .float-dmg { font-size:1.6rem; }
+    .cloud { display:none; }
+  }
+  #playerCard.lowhp .hpbar { animation: lowpulse .45s infinite alternate; border-color:#dc2626; }
+  .minibar.low .minifill { animation: lowpulse .45s infinite alternate; }
+  @keyframes lowpulse { from{filter:brightness(1)} to{filter:brightness(1.7)} }
+  #stage.bossfight { background:linear-gradient(180deg,#1c1917 0 34px,#7f1d1d 34px 128px,#b45309 128px 100%); }
+  #stage.bossfight .wall { background:repeating-linear-gradient(90deg,#450a0a 0 30px,#1c1917 30px 33px); color:#fecaca; }
+  #stage.bossfight .crowd { background:linear-gradient(180deg,#7f1d1d,#450a0a); }
+  #stage.bossfight .torch { font-size:2.4rem; }
+  #pSprite.dead { animation:none; transform:rotate(90deg); filter:grayscale(1); transition:transform .5s, filter .5s; }
+  #pack.flee .pet { animation: flee .6s forwards; }
+  @keyframes flee { to { transform:translateY(-130px); opacity:0; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar">
+    <div>
+      <h1>🗡️ SPEAR UPGRADE</h1>
+      <div class="sub">Dumb caveman → Apex hunter. Kill → loot meat, materials &amp; skins → upgrade spear, sew clothing, tame babies.</div>
+    </div>
+    <div class="badges">
+      <span class="badge">🏝️ Island <span id="bIsland">1</span></span>
+      <span class="badge">⭐ Level <span id="bLevel">1</span></span>
+      <span class="badge">🍖 <span id="bMeat">0</span></span>
+      <span class="badge">🪵 <span id="bMat">0</span></span>
+      <span class="badge">🦴 <span id="bSkin">0</span></span>
+      <button class="btn ghost" id="btnNew" style="margin:0">↻ New Game</button>
+      <button class="btn ghost" id="btnSound" style="margin:0" title="Sound on/off">🔊</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="card" id="playerCard">
+      <h2>🧔 YOU — Caveman <span id="pTitle">(Dumb)</span></h2>
+    <div class="hpbar"><div class="hpfill php" id="pHpFill" style="width:100%"></div></div>
+      <div class="stat">❤️ HP: <b><span id="pHp">500</span>/<span id="pMax">500</span></b></div>
+      <div class="stat">🗡️ Weapon: <b id="pWeapon">Stick</b> (<span id="pAtk">6</span> atk)</div>
+      <div class="stat">🥋 Clothing: <b id="pCloth">Rags</b> (<span id="pDef">0</span> def)</div>
+      <div class="stat">🐾 Pack: <b id="pPets">none</b></div>
+      <div class="disguise" id="disguiseMsg"></div>
+      <button class="btn heal" id="btnEat">🍖 Eat meat (+100 HP, costs 1)</button>
+    </div>
+
+    <div class="card" id="arena">
+      <div id="islandBanner">🏝️ Green Meadows — Island 1</div>
+      <div id="enemyName">Lemming</div>
+      <div id="stage">
+        <div class="wall">🏟️ ★ SPEAR ARENA ★ 🏟️</div>
+        <div class="crowd" id="crowd">🧑 👩 🧓 👴 👦 👧 🧔</div>
+        <span class="torch left">🔥</span>
+        <span class="torch right">🔥</span>
+        <div class="fighters">
+          <div class="fighter">
+            <div class="fname">🧔 YOU</div>
+            <div class="minibar"><div class="minifill php" id="stagePHp" style="width:100%"></div></div>
+            <div class="sprite" id="pSprite"><svg viewBox="0 0 130 165" aria-label="caveman">
+              <rect id="spearShaft" x="102" y="14" width="6" height="132" rx="3" fill="#8b5a2b"/>
+              <g id="tip0"><polygon points="105,2 110,20 100,20" fill="#a16207"/></g>
+              <g id="tip1" style="display:none"><polygon points="105,0 111,26 99,26" fill="#713f12"/><path d="M102 20 L108 20" stroke="#3f2d20" stroke-width="1.5"/></g>
+              <g id="tip2" style="display:none"><polygon points="105,0 116,24 105,20 94,24" fill="#a8a29e" stroke="#57534e" stroke-width="1.5"/><rect x="99" y="24" width="12" height="6" rx="2" fill="#3f2d20"/></g>
+              <g id="tip3" style="display:none"><polygon points="105,0 112,28 105,24 98,28" fill="#1c1917"/><rect x="99" y="26" width="12" height="6" rx="2" fill="#3f2d20"/></g>
+              <g id="tip4" style="display:none"><polygon points="105,0 114,28 105,23 96,28" fill="#fafaf9" stroke="#a8a29e" stroke-width="1.5"/><rect x="99" y="26" width="12" height="6" rx="2" fill="#92400e"/></g>
+              <g id="tip5" style="display:none"><polygon points="105,0 113,32 105,28 97,32" fill="#2e1065"/><path d="M103 8 L103 24" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/><rect x="99" y="28" width="12" height="6" rx="2" fill="#1c1917"/></g>
+              <g id="tip6" style="display:none"><polygon points="105,2 113,22 105,40 97,22" fill="#cbd5e1" stroke="#475569" stroke-width="1.5"/><rect x="100" y="38" width="10" height="8" rx="2" fill="#475569"/></g>
+              <g id="tip7" style="display:none"><polygon points="105,0 115,26 105,48 95,26" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/><path d="M102 8 L102 38" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/><rect x="92" y="46" width="26" height="6" rx="3" fill="#b45309"/></g>
+              <g id="tip8" style="display:none"><path d="M105,46 Q111,22 129,6 Q117,22 113,46 Z" fill="#fef9c7" stroke="#d4c79a" stroke-width="1.5"/><rect x="99" y="42" width="12" height="7" rx="2" fill="#92400e"/></g>
+              <g id="tip9" style="display:none"><polygon points="105,0 110,10 106,16 112,24 106,30 110,40 100,40 104,30 98,24 104,16 100,10" fill="#e7e5e4" stroke="#78716c" stroke-width="1.5"/><rect x="99" y="38" width="12" height="6" rx="2" fill="#44403c"/></g>
+              <g id="tip10" style="display:none"><circle cx="105" cy="26" r="17" fill="#fde047" opacity="0.3"/><polygon points="105,0 116,28 105,52 94,28" fill="#fde047" stroke="#b45309" stroke-width="2"/><path d="M102 10 L102 42" stroke="#fff7cc" stroke-width="2" stroke-linecap="round"/><rect x="90" y="48" width="30" height="7" rx="3.5" fill="#b45309"/><polygon points="124,2 126,8 132,10 126,12 124,18 122,12 116,10 122,8" fill="#fff7cc"/></g>
+              <rect x="26" y="72" width="12" height="34" rx="6" fill="#c68e5e" transform="rotate(18 32 72)"/>
+              <rect x="48" y="112" width="12" height="34" rx="6" fill="#c68e5e"/>
+              <rect x="64" y="112" width="12" height="34" rx="6" fill="#b57e52"/>
+              <ellipse cx="53" cy="148" rx="10" ry="5" fill="#3f2d20"/>
+              <ellipse cx="71" cy="148" rx="10" ry="5" fill="#3f2d20"/>
+              <path id="tunic" d="M40 60 L82 60 L76 118 L46 118 Z" fill="#b8a07a"/>
+              <rect x="44" y="88" width="34" height="8" rx="4" fill="#3f2d20"/>
+              <rect x="78" y="68" width="30" height="11" rx="5.5" fill="#d29a6b" transform="rotate(-8 78 68)"/>
+              <circle cx="58" cy="38" r="23" fill="#d29a6b"/>
+              <path d="M35 36 Q37 12 58 12 Q79 12 81 36 Q74 24 58 24 Q42 24 35 36 Z" fill="#3f2d20"/>
+              <path d="M40 48 Q58 74 76 48 Q74 66 58 68 Q42 66 40 48 Z" fill="#3f2d20"/>
+              <circle cx="50" cy="38" r="3.2" fill="#1c1917"/>
+              <circle cx="66" cy="38" r="3.2" fill="#1c1917"/>
+              <path d="M44 30 L54 33" stroke="#1c1917" stroke-width="3" stroke-linecap="round"/>
+              <path d="M72 30 L62 33" stroke="#1c1917" stroke-width="3" stroke-linecap="round"/>
+            </svg></div>
+            <div class="shadow"></div>
+            <div class="pack" id="pack"></div>
+          </div>
+          <div id="vs">⚔️</div>
+          <div class="fighter">
+            <div class="fname" id="stageEName">🐹 Lemming</div>
+            <div class="minibar"><div class="minifill ehp" id="stageEHp" style="width:100%"></div></div>
+            <div class="sprite" id="eSprite">🐹</div>
+            <div class="shadow"></div>
+          </div>
+        </div>
+        <div class="ground"></div>
+      </div>
+      <div class="stat">❤️ <span id="eHp">20</span>/<span id="eMax">20</span> &nbsp; ⚔️ <span id="eAtk">4</span> atk</div>
+      <button class="btn attack" id="btnAttack">🗡️ ATTACK!</button>
+      <div id="log"></div>
+    </div>
+
+    <div class="card" id="enemyCard">
+      <h2>📜 Hunt Info</h2>
+      <div class="stat">🎯 Target: <b id="infoName">Lemming</b></div>
+      <div class="stat">👪 Family: <b id="infoFam">small</b></div>
+      <div class="stat">🎁 Loot: <b id="infoLoot">—</b></div>
+      <div class="stat">☠️ Danger: <b id="infoDanger">—</b></div>
+      <div class="stat">🥊 Your hit: <b id="infoHit">—</b></div>
+      <div class="stat">👑 Boss: <b id="infoBoss">—</b></div>
+      <div class="stat">💀 Total kills: <b id="infoKills">0</b></div>
+      <h2 style="margin-top:10px">🐾 Pack (tamed)</h2>
+      <div id="packList"><div class="stat">No animals yet. Tame babies with meat!</div></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="weapon">🗡️ Upgrade Spear</button>
+    <button class="tab" data-tab="cloth">🥋 Sew Clothing</button>
+    <button class="tab" data-tab="tame">🐾 Tame / Feed Babies</button>
+    <button class="tab" data-tab="help">❓ How to play</button>
+  </div>
+  <div class="panel" id="panel"></div>
+</main>
+
+<script>
+(() => {
+// ---------- DATA ----------
+const WEAPONS = [
+  { name:"Stick", atk:6, cost:0 },
+  { name:"Sharpened Stick", atk:9, cost:8 },
+  { name:"Stone Spear", atk:14, cost:20 },
+  { name:"Flint Spear", atk:21, cost:40 },
+  { name:"Bone Spear", atk:30, cost:70 },
+  { name:"Obsidian Spear", atk:43, cost:110 },
+  { name:"Iron Spear", atk:60, cost:160 },
+  { name:"Steel Spear", atk:82, cost:230 },
+  { name:"Mammoth-Tusk Pike", atk:110, cost:320 },
+  { name:"Dragonbone Spear", atk:150, cost:450 },
+  { name:"GOD Spear", atk:220, cost:650 },
+];
+const CLOTHES = [
+  { name:"Rags (cold only)", def:0, cost:0, fam:null },
+  { name:"Hare Wraps", def:2, cost:6, fam:"small" },
+  { name:"Reindeer Hide", def:4, cost:15, fam:"hoof" },
+  { name:"Bison Leathers", def:7, cost:30, fam:"hoof" },
+  { name:"Dire Wolf Pelt (pretend wolf!)", def:10, cost:55, fam:"dog" },
+  { name:"Cave Bear Coat (pretend bear!)", def:14, cost:85, fam:"big" },
+  { name:"Sabertooth Stripes (pretend cat!)", def:19, cost:130, fam:"cat" },
+  { name:"Cave Lion Mane (pretend cat!)", def:25, cost:185, fam:"cat" },
+  { name:"Mammoth Fur (pretend giant!)", def:33, cost:260, fam:"giant" },
+  { name:"Boss-Hide Armor", def:45, cost:380, fam:"boss" },
+];
+// level progression animals (cycles, gets stronger each island)
+const ANIMALS = [
+  { name:"Lemming", emoji:"🐹", fam:"small" },
+  { name:"Arctic Hare", emoji:"🐇", fam:"small" },
+  { name:"Pika", emoji:"🐭", fam:"small" },
+  { name:"Ptarmigan", emoji:"🐦", fam:"small" },
+  { name:"Snowy Owl", emoji:"🦉", fam:"small" },
+  { name:"Reindeer", emoji:"🦌", fam:"hoof" },
+  { name:"Wild Horse", emoji:"🐴", fam:"hoof" },
+  { name:"Steppe Bison", emoji:"🦬", fam:"hoof" },
+  { name:"Arctic Fox", emoji:"🦊", fam:"dog" },
+  { name:"Coyote", emoji:"🐕", fam:"dog" },
+  { name:"Gray Wolf", emoji:"🐺", fam:"dog" },
+  { name:"Dire Wolf", emoji:"🐺", fam:"dog" },
+  { name:"Giant Beaver", emoji:"🦫", fam:"wild" },
+  { name:"Musk Ox", emoji:"🐂", fam:"wild" },
+  { name:"Cave Bear", emoji:"🐻", fam:"big" },
+  { name:"Giant Sloth", emoji:"🦥", fam:"big" },
+  { name:"Lynx", emoji:"🐱", fam:"cat" },
+  { name:"American Cheetah", emoji:"🐆", fam:"cat" },
+  { name:"Cave Lion", emoji:"🦁", fam:"cat" },
+  { name:"Mastodon", emoji:"🐘", fam:"giant" },
+  { name:"Woolly Rhino", emoji:"🦏", fam:"giant" },
+  { name:"Woolly Mammoth", emoji:"🦣", fam:"giant" },
+  { name:"Short-faced Bear", emoji:"🐻‍❄️", fam:"giant" },
+  { name:"Sabertooth", emoji:"🐅", fam:"cat" },
+];
+const TAMABLES = [
+  { name:"Baby Fox", emoji:"🦊", cost:20, baseAtk:3 },
+  { name:"Baby Dire Wolf", emoji:"🐺", cost:60, baseAtk:7 },
+  { name:"Baby Lynx", emoji:"🐱", cost:110, baseAtk:12 },
+  { name:"Baby Sabertooth", emoji:"🐯", cost:170, baseAtk:18 },
+  { name:"Baby Cave Lion", emoji:"🦁", cost:260, baseAtk:26 },
+  { name:"Baby Mammoth", emoji:"🦣", cost:420, baseAtk:40 },
+];
+const ISLANDS = ["❄️ Frozen Steppe","🧊 Glacier Fields","🌨️ Whiteout Pass","🌋 Ash Winter","🌲 Taiga Forest","🏔️ Mammoth Valley","🌊 Meltwater Shores"];
+const CROWD = ["🧑","👩","🧓","👴","👦","👧","🧔","👱‍♀️","👨‍🦰","👩‍🦱","🧕","👲"];
+const ISLE_BG = [
+  "linear-gradient(180deg,#bbf7d0,#fffbeb)",
+  "linear-gradient(180deg,#fde68a,#fffbeb)",
+  "linear-gradient(180deg,#bae6fd,#fffbeb)",
+  "linear-gradient(180deg,#fecaca,#fffbeb)",
+  "linear-gradient(180deg,#e9d5ff,#fffbeb)",
+  "linear-gradient(180deg,#d6d3d1,#fffbeb)",
+  "linear-gradient(180deg,#99f6e4,#fffbeb)"];
+const TITLES = [[1,"(Dumb)"],[10,"(Learning)"],[25,"(Hunter)"],[50,"(Tracker)"],[75,"(Beastfriend)"],[100,"(Apex Predator)"],[200,"(Legend)"]];
+const RANK_REWARD = {10:"Baby Fox",25:"Baby Dire Wolf",50:"Baby Lynx",75:"Baby Sabertooth",100:"Baby Cave Lion",200:"Baby Mammoth"};
+function rankIdx(l){ let r=0; for(const [t] of TITLES) if(l>=t) r++; return r-1; }
+
+// ---------- STATE ----------
+let S;
+function fresh(){ return { level:1, meat:3, mat:0, skins:0, weapon:0, cloth:0, php:500, pets:[], kills:0, dead:false }; }
+function load(){ try{ const s = JSON.parse(localStorage.getItem("spearUpgradeSave")); if(s && s.level && !s.dead) return s; }catch(e){} return fresh(); }
+S = load();
+let E = null; // current enemy {hp,max,atk,name,emoji,fam,boss,meat,mat,skins}
+
+function island(){ return Math.floor((S.level-1)/25)+1; }
+function islandName(){ return ISLANDS[(island()-1)%ISLANDS.length] + " — Island " + island(); }
+function animalFor(level){
+  const idx = (level-1) % ANIMALS.length;
+  return ANIMALS[idx];
+}
+function isBoss(level){ return level % 25 === 0; }
+function bossBase(level){ // boss copies an animal from past 24 levels, bigger+stronger
+  const back = 1 + ((level-2) % 24);
+  const lvl = level - back;
+  return animalFor(lvl);
+}
+function playerMaxHp(){ return 500 + S.cloth*30 + S.level*4 + (S.vigor||0)*25; }
+function playerAtk(){ return WEAPONS[S.weapon].atk + Math.floor(S.level/10)*2; }
+function playerDef(){ return CLOTHES[S.cloth].def; }
+function petDmg(){ return S.pets.reduce((a,p)=>a+p.atk,0); }
+function title(){ let t=TITLES[0][1]; for(const [l,n] of TITLES) if(S.level>=l) t=n; return t; }
+
+function spawn(){
+  const L = S.level, isl = island();
+  const islMult = Math.pow(1.5, isl-1);
+  const boss = isBoss(L);
+  const base = boss ? bossBase(L) : animalFor(L);
+  let max = Math.round((18 + L*8) * islMult);
+  let atk = Math.round((3 + L*0.8) * islMult);
+  max = Math.max(20, max); atk = Math.max(3, atk);
+  if(boss){ max = Math.round(max*1.8); atk = Math.round(atk*1.5); }
+  const size = {small:1, hoof:1.6, dog:1.6, wild:1.6, big:2.5, cat:2.2, giant:4}[base.fam] || 1;
+  const meat = Math.max(3, Math.round(((boss?35:6) + L/2 + (boss?L:0)) * size));
+  const mat = Math.max(3, Math.round(((boss?25:5) + L/2) * size));
+  const skins = Math.max(3, Math.round(((boss?18:3) + L/4 + (boss?L/3:0)) * size));
+  E = { hp:max, max, atk, name: boss? ("GIANT "+base.name.toUpperCase()+" 👑") : base.name,
+        emoji: boss? base.emoji : base.emoji, fam: boss? "boss": base.fam, prey: base.name, boss, meat, mat, skins };
+  if(S.php<=0 || S.php>playerMaxHp()) S.php = playerMaxHp();
+  S.php = Math.min(S.php, playerMaxHp());
+  setCrowd(boss?"scared":"idle");
+  if(boss) log(`👑 <b>A GIANT ${base.name.toUpperCase()} blocks your path!</b> The crowd gasps... good luck!`);
+  if(boss) SFX.boss();
+  render();
+}
+
+function setCrowd(mode){
+  const el=$("crowd"); if(!el) return;
+  if(mode==="cheer"){ el.textContent="🎉 🥳 🎉 🥳 🎉 🥳 🎉"; return; }
+  if(mode==="scared"){ el.textContent="😱 😨 😱 😨 😱 😨 😱"; return; }
+  if(mode==="sad"){ el.textContent="😭 😢 😭 😢 😭 😢 😭"; return; }
+  let cw=[]; for(let i=0;i<7;i++) cw.push(CROWD[Math.floor(Math.random()*CROWD.length)]); el.textContent=cw.join(" ");
+}
+
+// ---------- UI ----------
+const $ = id => document.getElementById(id);
+function log(msg){ const d=document.createElement("div"); d.innerHTML=msg; const l=$("log"); l.prepend(d); while(l.children.length>60) l.lastChild.remove(); }
+function dmgFloat(el, txt, color){ const r=el.getBoundingClientRect(), a=$("arena").getBoundingClientRect();
+  const s=document.createElement("div"); s.className="float-dmg"; s.textContent=txt; s.style.color=color;
+  s.style.left=(r.left-a.left+r.width/2)+"px"; s.style.top=(r.top-a.top)+"px";
+  $("arena").appendChild(s); setTimeout(()=>s.remove(),1000); s.style.rotate = (Math.random()*24-12)+"deg"; }
+const HIT_WORDS = ["BONK!","POW!","SMASH!","WHAM!","THWACK!","SPLAT!"];
+const HURT_WORDS = ["OUCH!","CHOMP!","RAWR!","GNASH!","YOW!"];
+const pick = a => a[Math.floor(Math.random()*a.length)];
+function poke(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(()=>el.classList.remove(cls),400); }
+
+function disguised(){
+  const c = CLOTHES[S.cloth];
+  if(!c.fam || !E) return false;
+  if(c.fam==="boss" && E.boss) return true;
+  return c.fam===E.fam;
+}
+
+const TUNIC = ["#b8a07a","#8f9c6b","#8a6f4d","#6e5638","#5b6470","#4a4440","#c2703d","#d4a017","#ddd6c8","#7f1d1d"];
+const SHAFT = ["#8b5a2b","#7a4e24","#78716c","#44403c","#e7e5e4","#3b1d6e","#52525b","#94a3b8","#e8dcc0","#0e7490","#b45309"];
+function paintCaveman(){
+  $("tunic").setAttribute("fill", TUNIC[S.cloth]||TUNIC[0]);
+  $("spearShaft").setAttribute("fill", SHAFT[S.weapon]||SHAFT[0]);
+  $("spearShaft").setAttribute("width", 5+S.weapon*0.4);
+  for(let i=0;i<11;i++){ const g=$("tip"+i); if(g) g.style.display = i===S.weapon?"":"none"; }
+}
+function render(){
+  $("bIsland").textContent=island(); $("bLevel").textContent=S.level;
+  $("bMeat").textContent=S.meat; $("bMat").textContent=S.mat; $("bSkin").textContent=S.skins;
+  const pm = playerMaxHp();
+  if(S.php>pm) S.php=pm;
+  $("pHp").textContent=S.php; $("pMax").textContent=pm;
+  $("pHpFill").style.width=(100*S.php/pm)+"%";
+  $("stagePHp").style.width=(100*S.php/pm)+"%";
+  const lowHp = S.php < pm*0.25;
+  $("playerCard").classList.toggle("lowhp", lowHp);
+  $("stagePHp").parentElement.classList.toggle("low", lowHp);
+  $("pWeapon").textContent=WEAPONS[S.weapon].name; $("pAtk").textContent=playerAtk();
+  $("pCloth").textContent=CLOTHES[S.cloth].name; $("pDef").textContent=playerDef();
+  $("pTitle").textContent=title();
+  $("pPets").textContent = S.pets.length? S.pets.map(p=>p.emoji+" Lv"+p.lvl).join(" ") : "none";
+  { const pk=$("pack"); pk.innerHTML="";
+    S.pets.forEach((p,i)=>{ const s=document.createElement("span"); s.className="pet"; s.title=petName(p); s.style.animationDelay=(i*0.13)+"s"; const sp=p.species||p.name.replace(/^Baby /,"").replace(/^Puppy$/,"Dog"); const pw=({Baby:54,Young:72,Teen:92,Adult:116}[stageFor(p.lvl)]||54); s.innerHTML=`${petSVG(sp,pw)}<small>Lv${p.lvl}</small>`; pk.appendChild(s); }); }
+  paintCaveman();
+  $("islandBanner").textContent = "🏝️ " + islandName();
+  $("arena").style.background = ISLE_BG[(island()-1)%ISLE_BG.length];
+  if(E){
+    $("enemyName").textContent = (E.boss?"👑 ":"") + E.name + "  " + E.emoji;
+    $("enemyName").className = E.boss? "bossName":"";
+    $("arena").classList.toggle("boss", E.boss);
+    $("stage").classList.toggle("bossfight", E.boss);
+    $("eSprite").innerHTML='<span class="face">'+beastSVG(E)+'</span>';
+    $("eHp").textContent=E.hp; $("eMax").textContent=E.max; $("eAtk").textContent=E.atk;
+    $("stageEHp").style.width=(100*E.hp/E.max)+"%";
+    $("stageEName").textContent=E.emoji+" "+E.name;
+    $("infoName").textContent=E.name; $("infoFam").textContent=E.fam;
+    $("infoLoot").textContent=`🍖${E.meat} meat (you: ${S.meat}) · 🪵${E.mat} (you: ${S.mat}) · 🦴${E.skins} hide (you: ${S.skins})`;
+    $("infoDanger").textContent = E.boss? "BOSS — huge & furious!" : (E.atk>playerAtk()? "Stronger than you — upgrade!":"You can take it!");
+    $("infoHit").textContent = "~"+(playerAtk()+1+petDmg())+" per hit (12% crit ×1.6)";
+    $("infoKills").textContent = S.kills;
+    { const _m = S.level % 25;
+      $("infoBoss").textContent = _m===0 ? "👑 NOW — good luck!" : `in ${25-_m} (Lv ${S.level+(25-_m)})`; }
+    $("disguiseMsg").textContent = disguised()? "🥸 Disguise works! Looks like "+E.fam+" — takes 30% less damage." : "";
+  }
+  const pl=$("packList"); pl.innerHTML="";
+  if(!S.pets.length){ pl.innerHTML='<div class="stat">No animals yet. Tame babies with meat!</div>'; }
+  S.pets.forEach((p,i)=>{
+    const d=document.createElement("div"); d.className="row";
+    d.innerHTML=`<div>${p.emoji} <b>${petName(p)}</b> <small>Lv ${p.lvl} · ${p.atk} atk · feed: ${4+p.lvl*2}🍖</small></div>`;
+    const b=document.createElement("button"); b.className="btn heal"; b.textContent="🍖 Feed";
+    b.disabled = S.meat < 4+p.lvl*2;
+    b.onclick=()=>feedPet(i);
+    d.appendChild(b); pl.appendChild(d);
+  });
+  save();
+  drawPanel(); // keep shop buttons/prices in sync after every kill, meal, or feed
+}
+function save(){ localStorage.setItem("spearUpgradeSave", JSON.stringify(S)); }
+
+// ---------- COMBAT ----------
+let AC=null, soundOn=true;
+try{ soundOn = localStorage.getItem("spearSound")!=="off"; }catch(e){}
+function tone(f, d=0.1, type="square", v=0.06, slide=0){
+  if(!soundOn) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==="suspended") AC.resume();
+    const o=AC.createOscillator(), g=AC.createGain();
+    o.type=type; o.frequency.setValueAtTime(f, AC.currentTime);
+    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(20,f+slide), AC.currentTime+d);
+    g.gain.setValueAtTime(v, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime+d);
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime+d);
+  }catch(e){}
+}
+const SFX = {
+  hit(){ tone(160,0.09,"square",0.07,-60); },
+  crit(){ tone(300,0.07,"square",0.08); setTimeout(()=>tone(450,0.12,"square",0.08),60); },
+  hurt(){ tone(110,0.12,"sawtooth",0.07,-40); },
+  eat(){ tone(400,0.07,"sine",0.08); setTimeout(()=>tone(600,0.09,"sine",0.08),70); },
+  win(){ [523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,0.12,"triangle",0.08),i*90)); },
+  rank(){ [392,523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.14,"triangle",0.09),i*80)); },
+  death(){ tone(300,0.4,"sawtooth",0.09,-220); },
+  buy(){ tone(700,0.07,"sine",0.07); setTimeout(()=>tone(1000,0.1,"sine",0.07),70); },
+  boss(){ tone(80,0.5,"sawtooth",0.1,-30); setTimeout(()=>tone(120,0.4,"sawtooth",0.09),150); }
+};
+function alive(){ if(S.dead){ log("☠️ You're dead — hit ↻ New Game for a fresh caveman."); return false; } return true; }
+$("btnAttack").onclick = () => {
+  if(!E || S.php<=0 || !alive()) return;
+  const card=$("arena"); card.classList.remove("shake"); void card.offsetWidth;
+  // player hit (small variance)
+  let dmg = playerAtk() + Math.floor(Math.random()*4);
+  const pets = petDmg();
+  if(pets>0) dmg += pets;
+  const crit = Math.random()<0.12;
+  if(crit) dmg = Math.round(dmg*1.6);
+  E.hp -= dmg;
+  poke($("pSprite"),"lunge"); poke($("eSprite"),"squash");
+  document.querySelectorAll("#pack .pet").forEach((el,i)=>setTimeout(()=>poke(el,"hop"), i*60));
+  dmgFloat($("eSprite"), (crit?"CRIT ":"")+pick(HIT_WORDS)+" -"+dmg, crit?"#fde047":"#fbbf24");
+  crit?SFX.crit():SFX.hit();
+  log(`🗡️ You hit <b>${E.name}</b> for <b>${dmg}</b>${crit?" <b>CRITICAL!</b>":""}${pets?` (incl. ${pets} from pack)`:""}.`);
+  if(E.hp<=0){ victory(); return; }
+  // enemy hits back
+  let ed = E.atk + Math.floor(Math.random()*3);
+  if(disguised()) ed = Math.max(1, Math.round(ed*0.7));
+  ed = Math.max(1, ed - playerDef());
+  // pets sometimes block? small dodge from disguise
+  const wasLowHp = S.php < playerMaxHp()*0.25;
+  S.php -= ed;
+  poke($("eSprite"),"lunge"); poke($("pSprite"),"squash");
+  dmgFloat($("pSprite"), pick(HURT_WORDS)+" -"+ed, "#ef4444");
+  SFX.hurt();
+  $("playerCard").classList.remove("shake"); void $("playerCard").offsetWidth; $("playerCard").classList.add("shake");
+  log(`💥 ${E.name} bites back for <b>${ed}</b>.${disguised()?" (disguise fooled it!)":""}`);
+  if(!wasLowHp && S.php>0 && S.php < playerMaxHp()*0.25) log(`⚠️ <b>LOW HP!</b> Eat meat (🍖 button above) or this caveman dies!`);
+  if(S.php<=0){ S.php=0; render(); gameOver(); return; }
+  render();
+};
+function victory(){
+  log(`✅ <b>Defeated ${E.name}!</b> +🍖${E.meat} meat, +🪵${E.mat}, +🦴${E.skins} hide.`);
+  setCrowd("cheer");
+  SFX.win();
+  S.meat+=E.meat; S.mat+=E.mat; S.skins+=E.skins; S.kills++;
+  const wasBoss = E.boss;
+  const oldRank = rankIdx(S.level);
+  S.level++;
+  const newRank = rankIdx(S.level);
+  // no free heal — damage persists until you eat meat or sew new clothing
+  if(newRank>oldRank){
+    S.vigor=(S.vigor||0)+1;
+    const th = TITLES[newRank][0];
+    const T = TAMABLES.find(t=>t.name===RANK_REWARD[th]);
+    let petMsg="";
+    if(T && !S.pets.some(p=>(p.species||"")===T.name.replace(/^Baby /,""))){
+      S.pets.push({name:T.name,emoji:T.emoji,atk:T.baseAtk,base:T.baseAtk,species:T.name.replace(/^Baby /,""),lvl:1});
+      petMsg=` A wild <b>${T.name}</b> joins your pack!`;
+    }
+    const gm=10+newRank*15, gw=8+newRank*12, gs=6+newRank*10;
+    S.meat+=gm; S.mat+=gw; S.skins+=gs;
+    S.php=playerMaxHp();
+    log(`🎉 <b>RANK UP! You are now ${title()}!</b> Body hardened (+25 max HP), fully healed, +🍖${gm} +🪵${gw} +🦴${gs}.${petMsg}`);
+    dmgFloat($("pSprite"), "RANK UP!", "#fbbf24");
+    SFX.rank();
+  }
+  if(wasBoss) log(`🎉 <b>BOSS SLAIN! You sail to a new island...</b> Next beasts are stronger than before, but weaker than the boss. 🏝️`);
+  spawn();
+  if(wasBoss) log(`🌊 Landed on <b>${islandName()}</b>!`);
+}
+function gameOver(){
+  S.dead = true;
+  $("pSprite").classList.add("dead");
+  dmgFloat($("pSprite"), "RIP 💀", "#1c1917");
+  log(`☠️ <b>YOU DIED to ${E.name} at level ${S.level} with ${S.kills} kills. Permadeath — that caveman is gone.</b>`);
+  if(S.pets.length){
+    const n=S.pets.length;
+    log(`🐾 With you gone, your ${n} tamed beast${n>1?"s":""} scatter${n>1?"":"s"} back into the wild! 💨`);
+    dmgFloat($("pSprite"), "THE PACK FLEES! 💨", "#a855f7");
+    $("pack").classList.add("flee");
+  }
+  setCrowd("sad");
+  SFX.death();
+  const btn = $("btnAttack");
+  btn.textContent = "☠️ YOU DIED — click ↻ New Game above to reincarnate";
+  btn.disabled = true;
+  save();
+  setTimeout(()=>{ S.pets=[]; save(); render(); }, 700);
+}
+$("btnEat").onclick=()=>{ if(!alive())return; if(S.meat<1){log("No meat! Kill something first.");return;} if(S.php>=playerMaxHp()){log("Already full HP.");return;} S.meat--; S.php=Math.min(playerMaxHp(),S.php+100); dmgFloat($("pSprite"), "YUM! +100", "#16a34a"); SFX.eat(); log("🍖 Yum! +100 HP."); render(); };
+$("btnNew").onclick=()=>{ $("pSprite").classList.remove("dead"); const pk0=$("pack"); if(pk0) pk0.classList.remove("flee"); S=fresh(); $("btnAttack").disabled=false; $("btnAttack").textContent="🗡️ ATTACK!"; log("🌅 A new dumb caveman (500 HP) wakes up with a stick..."); localStorage.removeItem("spearUpgradeSave"); spawn(); render(); };
+$("btnSound").onclick=()=>{ soundOn=!soundOn; $("btnSound").textContent=soundOn?"🔊":"🔇"; try{localStorage.setItem("spearSound",soundOn?"on":"off");}catch(e){} if(soundOn) SFX.buy(); };
+
+// ---------- SHOP TABS ----------
+let tab="weapon";
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{ tab=t.dataset.tab;
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===t)); drawPanel(); });
+
+function stageFor(l){ return l>=25?"Adult": l>=15?"Teen": l>=6?"Young":"Baby"; }
+function petName(p){ const sp=p.species||p.name.replace(/^Baby /,"").replace(/^Puppy$/,"Dog"); return stageFor(p.lvl)+" "+sp; }
+function petSVG(sp, w){
+  const C = {
+    "Fox":{b:"#e07b2a",d:"#8a4a1a",belly:"#f6e3c5"},
+    "Dire Wolf":{b:"#6b7280",d:"#374151",belly:"#9ca3af"},
+    "Lynx":{b:"#c2a06b",d:"#7c5a2e",belly:"#e8d5ae"},
+    "Sabertooth":{b:"#d98e32",d:"#7c4a12",belly:"#f3dfba"},
+    "Cave Lion":{b:"#cfa15c",d:"#8a5a24",belly:"#efdcb2"},
+    "Mammoth":{b:"#7a6a5f",d:"#4a3f36",belly:"#a08e7e"}
+  }[sp]||{b:"#9ca3af",d:"#4b5563",belly:"#d1d5db"};
+  let tail="", deco="", head="";
+  if(sp==="Mammoth"){
+    tail=`<path d="M26 38 Q14 42 14 54" stroke="${C.d}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="14" cy="56" r="4" fill="${C.d}"/>`;
+    head=`<ellipse cx="60" cy="22" rx="6" ry="8" fill="${C.d}"/><circle cx="74" cy="28" r="15" fill="${C.b}"/><circle cx="76" cy="24" r="2.4" fill="#1c1917"/><path d="M87 36 Q94 52 85 60" stroke="${C.d}" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M88 42 Q99 44 102 30" stroke="#f5f0e6" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  } else {
+    if(sp==="Fox") tail=`<polygon points="27,42 6,34 10,18 29,30" fill="${C.b}"/><polygon points="6,34 10,18 16,26" fill="#fafaf9"/>`;
+    else if(sp==="Dire Wolf") tail=`<polygon points="28,38 6,46 28,50" fill="${C.d}"/>`;
+    else if(sp==="Lynx"){ tail=`<rect x="20" y="33" width="11" height="9" rx="4.5" fill="${C.d}"/>`; deco=`<circle cx="40" cy="31" r="2" fill="${C.d}" opacity=".55"/><circle cx="52" cy="35" r="2" fill="${C.d}" opacity=".55"/><circle cx="62" cy="30" r="2" fill="${C.d}" opacity=".55"/>`; }
+    else if(sp==="Sabertooth"){ tail=`<polygon points="28,38 8,44 28,50" fill="${C.b}"/>`; deco=`<path d="M38 25 q4 9 0 18 M50 23 q4 10 0 20 M62 25 q4 9 0 18" stroke="${C.d}" stroke-width="3" fill="none" stroke-linecap="round"/>`; }
+    else if(sp==="Cave Lion"){ tail=`<path d="M26 40 Q12 44 12 56" stroke="${C.d}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="12" cy="58" r="5" fill="${C.d}"/>`; deco=`<circle cx="72" cy="25" r="17" fill="${C.d}"/>`; }
+    else tail=`<polygon points="28,38 8,44 28,50" fill="${C.d}"/>`;
+    const fangs = sp==="Sabertooth" ? `<polygon points="83,31 86,43 89,31" fill="#fff" stroke="#d1d5db"/><polygon points="89,31 92,43 95,31" fill="#fff" stroke="#d1d5db"/>` : "";
+    head=`${deco}<polygon points="68,15 71,3 78,13" fill="${C.b}"/><polygon points="76,13 82,2 86,14" fill="${C.b}"/><circle cx="76" cy="25" r="12" fill="${C.b}"/><polygon points="86,22 95,27 86,32" fill="${C.belly}"/><circle cx="93" cy="27" r="2" fill="#1c1917"/><circle cx="78" cy="21" r="2.2" fill="#1c1917"/>${fangs}`;
+  }
+  return `<svg viewBox="0 0 104 72" width="${w}" aria-label="${sp}"><ellipse cx="52" cy="68" rx="30" ry="3.5" fill="rgba(28,25,23,.2)"/>${tail}<rect x="34" y="44" width="7" height="22" rx="3.5" fill="${C.d}"/><rect x="58" y="44" width="7" height="22" rx="3.5" fill="${C.d}"/><ellipse cx="50" cy="38" rx="26" ry="15" fill="${C.b}"/><ellipse cx="50" cy="44" rx="19" ry="7" fill="${C.belly}" opacity=".7"/><rect x="42" y="44" width="7" height="22" rx="3.5" fill="${C.b}"/><rect x="66" y="44" width="7" height="22" rx="3.5" fill="${C.b}"/>${head}</svg>`;
+}
+function beastSVG(E){
+  const L = {
+    "Lemming":{b:"#8a6f5d",d:"#4a3a2c",belly:"#d9c7a8",ear:"round",tail:"stub"},
+    "Arctic Hare":{b:"#f1f5f9",d:"#94a3b8",belly:"#ffffff",ear:"long",tail:"stub"},
+    "Pika":{b:"#a08054",d:"#5f4a2e",belly:"#e3cfa3",ear:"round",tail:"none"},
+    "Ptarmigan":{bird:1,b:"#f8fafc",d:"#94a3b8",belly:"#e2e8f0"},
+    "Snowy Owl":{bird:1,owl:1,b:"#f1f5f9",d:"#475569",belly:"#ffffff"},
+    "Reindeer":{b:"#8a6f4d",d:"#4a3826",belly:"#d9c39a",ear:"point",tail:"stub",antlers:1},
+    "Wild Horse":{b:"#7c5a3a",d:"#3f2d1c",belly:"#c9a876",ear:"point",tail:"straight",hmane:1},
+    "Steppe Bison":{b:"#5f4a2e",d:"#2e2314",belly:"#8a6f4d",ear:"round",tail:"tuft",hump:1,horns:1},
+    "Arctic Fox":{b:"#e07b2a",d:"#8a4a1a",belly:"#f6e3c5",ear:"point",tail:"bushy"},
+    "Coyote":{b:"#b08d57",d:"#5f4a2e",belly:"#e3cfa3",ear:"point",tail:"bushy"},
+    "Gray Wolf":{b:"#6b7280",d:"#374151",belly:"#9ca3af",ear:"point",tail:"straight"},
+    "Dire Wolf":{b:"#4b5563",d:"#1f2937",belly:"#9ca3af",ear:"point",tail:"straight",bulk:1},
+    "Giant Beaver":{b:"#7c5233",d:"#3f2a18",belly:"#c9a876",ear:"round",tail:"flat",teeth:1},
+    "Musk Ox":{b:"#4a3a2c",d:"#241a10",belly:"#7c6a54",ear:"round",tail:"stub",horns:"ox",shag:1},
+    "Cave Bear":{b:"#6e5136",d:"#3a2a1a",belly:"#c9a876",ear:"round",tail:"stub",bulk:1,headR:14},
+    "Giant Sloth":{b:"#a8906c",d:"#5f4a2e",belly:"#d9c79a",ear:"round",tail:"stub",mask:1,claws:1},
+    "Lynx":{b:"#c2a06b",d:"#7c5a2e",belly:"#e8d5ae",ear:"point",tail:"stub",spots:1,slim:1},
+    "American Cheetah":{b:"#d9a75f",d:"#7c4a12",belly:"#f3e2c2",ear:"round",tail:"straight",spots:1,slim:1,tears:1},
+    "Cave Lion":{b:"#cfa15c",d:"#8a5a24",belly:"#efdcb2",ear:"round",tail:"tuft",mane:1,slim:1},
+    "Sabertooth":{b:"#d98e32",d:"#7c4a12",belly:"#f3dfba",ear:"round",tail:"straight",stripes:1,fangs:1},
+    "Mastodon":{mammoth:1,b:"#6e5a44",d:"#3f3226",belly:"#a08e7e",tuskUp:1},
+    "Woolly Rhino":{rhino:1,b:"#7a6a5f",d:"#4a3f36",belly:"#a08e7e"},
+    "Woolly Mammoth":{mammoth:1,b:"#7a6a5f",d:"#4a3f36",belly:"#a08e7e"},
+    "Short-faced Bear":{b:"#e8e0d0",d:"#8a8272",belly:"#f5f0e6",ear:"round",tail:"stub",bulk:1,headR:14}
+  }[E.name]||{b:"#9ca3af",d:"#4b5563",belly:"#d1d5db",ear:"round",tail:"stub"};
+  const w = E.boss?190:150;
+  const b=L.b, d=L.d, belly=L.belly;
+  const shadow=`<ellipse cx="52" cy="68" rx="30" ry="3.5" fill="rgba(28,25,23,.2)"/>`;
+  if(L.bird){
+    const eyes = L.owl
+      ? `<circle cx="72" cy="22" r="5.5" fill="#fff"/><circle cx="72" cy="22" r="2.4" fill="#1c1917"/><circle cx="86" cy="22" r="5.5" fill="#fff"/><circle cx="86" cy="22" r="2.4" fill="#1c1917"/><polygon points="70,8 74,2 78,8" fill="${d}"/><polygon points="82,8 86,2 90,8" fill="${d}"/>`
+      : `<circle cx="80" cy="20" r="2.4" fill="#1c1917"/><polygon points="88,24 97,28 88,32" fill="#f59e0b"/>`;
+    return `<svg viewBox="0 0 104 72" width="${w}">${shadow}<polygon points="30,40 8,52 26,52" fill="${d}"/><ellipse cx="55" cy="42" rx="24" ry="17" fill="${b}"/><ellipse cx="55" cy="30" rx="15" ry="12" fill="${belly}" opacity=".6"/><ellipse cx="48" cy="44" rx="12" ry="8" fill="${d}" opacity=".35"/><circle cx="78" cy="24" r="12" fill="${b}"/>${eyes}<rect x="46" y="58" width="4" height="8" fill="#f59e0b"/><rect x="58" y="58" width="4" height="8" fill="#f59e0b"/></svg>`;
+  }
+  if(L.mammoth){
+    const tusk = L.tuskUp
+      ? `<path d="M88 42 Q98 42 100 24" stroke="#f5f0e6" stroke-width="5" fill="none" stroke-linecap="round"/>`
+      : `<path d="M88 42 Q99 44 102 30" stroke="#f5f0e6" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+    return `<svg viewBox="0 0 104 72" width="${w}">${shadow}<path d="M26 38 Q14 42 14 54" stroke="${d}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="14" cy="56" r="4" fill="${d}"/><rect x="34" y="44" width="7" height="22" rx="3.5" fill="${d}"/><rect x="58" y="44" width="7" height="22" rx="3.5" fill="${d}"/><ellipse cx="50" cy="38" rx="26" ry="15" fill="${b}"/><rect x="42" y="44" width="7" height="22" rx="3.5" fill="${b}"/><rect x="66" y="44" width="7" height="22" rx="3.5" fill="${b}"/><ellipse cx="60" cy="22" rx="6" ry="8" fill="${d}"/><circle cx="74" cy="28" r="15" fill="${b}"/><circle cx="76" cy="24" r="2.4" fill="#1c1917"/><path d="M87 36 Q94 52 85 60" stroke="${d}" stroke-width="8" fill="none" stroke-linecap="round"/>${tusk}</svg>`;
+  }
+  if(L.rhino){
+    return `<svg viewBox="0 0 104 72" width="${w}">${shadow}<polygon points="28,40 12,46 28,50" fill="${d}"/><rect x="32" y="42" width="8" height="24" rx="4" fill="${d}"/><rect x="58" y="42" width="8" height="24" rx="4" fill="${d}"/><ellipse cx="50" cy="38" rx="27" ry="16" fill="${b}"/><rect x="42" y="42" width="8" height="24" rx="4" fill="${b}"/><rect x="68" y="42" width="8" height="24" rx="4" fill="${b}"/><polygon points="66,12 70,2 74,12" fill="${b}"/><circle cx="76" cy="26" r="13" fill="${b}"/><polygon points="86,22 98,28 86,32" fill="${belly}"/><polygon points="90,24 94,12 96,24" fill="#e7e5e4"/><polygon points="95,25 101,16 102,25" fill="#e7e5e4"/><circle cx="78" cy="22" r="2.2" fill="#1c1917"/></svg>`;
+  }
+  const ry = L.slim?12:15;
+  let tail="";
+  if(L.tail==="bushy") tail=`<polygon points="27,42 6,34 10,18 29,30" fill="${b}"/><polygon points="6,34 10,18 16,26" fill="${belly}"/>`;
+  else if(L.tail==="straight") tail=`<polygon points="28,38 6,46 28,50" fill="${d}"/>`;
+  else if(L.tail==="stub") tail=`<rect x="20" y="33" width="11" height="9" rx="4.5" fill="${d}"/>`;
+  else if(L.tail==="tuft") tail=`<path d="M26 40 Q12 44 12 56" stroke="${d}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="12" cy="58" r="5" fill="${d}"/>`;
+  else if(L.tail==="flat") tail=`<ellipse cx="14" cy="46" rx="12" ry="6" fill="${d}" transform="rotate(-15 14 46)"/>`;
+  let deco="";
+  if(L.spots) deco+=`<circle cx="40" cy="31" r="2" fill="${d}" opacity=".55"/><circle cx="52" cy="35" r="2" fill="${d}" opacity=".55"/><circle cx="62" cy="30" r="2" fill="${d}" opacity=".55"/><circle cx="46" cy="40" r="2" fill="${d}" opacity=".55"/>`;
+  if(L.stripes) deco+=`<path d="M38 25 q4 9 0 18 M50 23 q4 10 0 20 M62 25 q4 9 0 18" stroke="${d}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  if(L.hump) deco+=`<ellipse cx="42" cy="24" rx="12" ry="7" fill="${b}"/>`;
+  if(L.hmane) deco+=`<path d="M64 18 L84 18 L82 30 L66 30 Z" fill="${d}"/>`;
+  if(L.shag) deco+=`<polygon points="28,50 34,58 40,50 46,58 52,50 58,58 64,50 70,58 74,52 74,46 28,46" fill="${d}" opacity=".6"/>`;
+  if(L.mask) deco+=`<ellipse cx="76" cy="24" rx="10" ry="6" fill="${belly}" opacity=".8"/>`;
+  let ears="";
+  if(L.ear==="point") ears=`<polygon points="68,15 71,3 78,13" fill="${b}"/><polygon points="76,13 82,2 86,14" fill="${b}"/>`;
+  else if(L.ear==="round") ears=`<circle cx="68" cy="12" r="5" fill="${b}"/><circle cx="82" cy="12" r="5" fill="${b}"/>`;
+  else if(L.ear==="long") ears=`<ellipse cx="68" cy="6" rx="3.5" ry="8" fill="${b}"/><ellipse cx="80" cy="6" rx="3.5" ry="8" fill="${b}"/>`;
+  let head=`<circle cx="76" cy="25" r="${L.headR||12}" fill="${b}"/><polygon points="86,22 95,27 86,32" fill="${belly}"/><circle cx="93" cy="27" r="2" fill="#1c1917"/><circle cx="78" cy="21" r="2.2" fill="#1c1917"/>`;
+  if(L.mane) head=`<circle cx="72" cy="25" r="17" fill="${d}"/>`+head;
+  if(L.fangs) head+=`<polygon points="83,31 86,43 89,31" fill="#fff" stroke="#d1d5db"/><polygon points="89,31 92,43 95,31" fill="#fff" stroke="#d1d5db"/>`;
+  if(L.horns===1) head=`<path d="M66 14 Q58 6 50 10" stroke="#e7e5e4" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M86 14 Q94 6 102 10" stroke="#e7e5e4" stroke-width="4" fill="none" stroke-linecap="round"/>`+head;
+  if(L.horns==="ox") head=`<path d="M64 16 Q50 14 46 26" stroke="#d9cfae" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M88 16 Q102 14 106 26" stroke="#d9cfae" stroke-width="5" fill="none" stroke-linecap="round"/>`+head;
+  if(L.antlers) head=`<path d="M68 12 L62 0 M65 6 L58 4 M82 12 L88 0 M85 6 L92 4" stroke="#e7e5e4" stroke-width="3" stroke-linecap="round"/>`+head;
+  if(L.teeth) head+=`<rect x="86" y="31" width="8" height="6" fill="#fff" stroke="#d1d5db"/>`;
+  if(L.tears) head+=`<path d="M74 24 L72 32 M82 24 L84 32" stroke="${d}" stroke-width="2"/>`;
+  if(L.claws) deco+=`<path d="M40 64 L36 70 M48 64 L46 70 M64 64 L62 70 M72 64 L70 70" stroke="${belly}" stroke-width="2.5" stroke-linecap="round"/>`;
+  return `<svg viewBox="0 0 104 72" width="${w}">${shadow}${tail}<rect x="34" y="44" width="7" height="22" rx="3.5" fill="${d}"/><rect x="58" y="44" width="7" height="22" rx="3.5" fill="${d}"/><ellipse cx="50" cy="38" rx="26" ry="${ry}" fill="${b}"/><ellipse cx="50" cy="44" rx="19" ry="7" fill="${belly}" opacity=".7"/><rect x="42" y="44" width="7" height="22" rx="3.5" fill="${b}"/><rect x="66" y="44" width="7" height="22" rx="3.5" fill="${b}"/>${deco}${ears}${head}</svg>`;
+}
+function feedPet(i){
+  if(!alive()) return;
+  const p=S.pets[i];
+  if(!p.base) p.base=p.atk;
+  if(!p.species) p.species=p.name.replace(/^Baby /,"").replace(/^Puppy$/,"Dog");
+  const old=stageFor(p.lvl);
+  const cost=4+p.lvl*2;
+  if(S.meat<cost) return;
+  S.meat-=cost; SFX.buy(); p.lvl++; p.atk+=Math.max(1,Math.round(p.base*0.2));
+  const nw=stageFor(p.lvl);
+  log(`🍖 ${petName(p)} is now <b>Lv ${p.lvl}</b> (${p.atk} atk)!`+(nw!==old?` 🎉 It grew into a <b>${nw}</b>!`:""));
+  render(); drawPanel();
+}
+function drawPanel(){
+  const P=$("panel"); P.innerHTML="";
+  if(tab==="weapon"){
+    P.innerHTML="<b>🪵 Materials upgrade your spear. Stronger spear = bigger hits.</b>";
+    WEAPONS.forEach((w,i)=>{
+      const r=document.createElement("div"); r.className="row";
+      const owned = i<=S.weapon, cur = i===S.weapon, next = i===S.weapon+1;
+      r.innerHTML=`<div>${i<=S.weapon?"✅":"🔒"} <b>${w.name}</b> <small>${w.atk} atk${w.cost?` · costs 🪵${w.cost}`:" · starting stick"}</small></div>`;
+      if(next){ const b=document.createElement("button"); b.className="btn craft"; b.textContent=`Upgrade 🪵${w.cost}`; b.disabled=S.mat<w.cost;
+        b.onclick=()=>{ if(!alive())return; if(S.mat>=w.cost){S.mat-=w.cost;S.weapon=i;SFX.buy();log(`🗡️ Forged <b>${w.name}</b>! (${w.atk} atk)`);render();drawPanel();} }; r.appendChild(b); }
+      else if(cur){ const s=document.createElement("span"); s.textContent="EQUIPPED"; r.appendChild(s); }
+      P.appendChild(r);
+    });
+  } else if(tab==="cloth"){
+    P.innerHTML="<b>🦴 Skins sew clothing. More defense = less damage taken. Matching family = disguise (30% less damage + pretend to be that animal).</b>";
+    CLOTHES.forEach((c,i)=>{
+      const r=document.createElement("div"); r.className="row";
+      r.innerHTML=`<div>${i<=S.cloth?"✅":"🔒"} <b>${c.name}</b> <small>${c.def} def${c.cost?` · costs 🦴${c.cost}`:" · keeps you from freezing only"}${c.fam?` · fools: ${c.fam}`:""}</small></div>`;
+      if(i===S.cloth+1){ const b=document.createElement("button"); b.className="btn craft"; b.textContent=`Sew 🦴${c.cost}`; b.disabled=S.skins<c.cost;
+        b.onclick=()=>{ if(!alive())return; if(S.skins>=c.cost){S.skins-=c.cost;S.cloth=i;SFX.buy();S.php=Math.min(playerMaxHp(),S.php+20);log(`🥋 Sewed <b>${c.name}</b>! Now you can pretend to be ${c.fam||"a freezing caveman"}.`);render();drawPanel();} }; r.appendChild(b); }
+      else if(i===S.cloth){ const s=document.createElement("span"); s.textContent="WORN"; r.appendChild(s); }
+      P.appendChild(r);
+    });
+  } else if(tab==="tame"){
+    P.innerHTML="<b>🍖 Tame babies with meat. They bite every time you attack. Feed them — Lv 6 → Young, Lv 15 → Teen, Lv 25 → Adult. No max level!</b>";
+    TAMABLES.forEach(t=>{
+      const owned = S.pets.filter(p=>p.name===t.name).length;
+      const r=document.createElement("div"); r.className="row";
+      r.innerHTML=`<div>${t.emoji} <b>${t.name}</b> <small>${t.baseAtk} atk · costs 🍖${t.cost} · you own: ${owned}</small></div>`;
+      const b=document.createElement("button"); b.className="btn tame"; b.textContent=`Tame 🍖${t.cost}`; b.disabled=S.meat<t.cost;
+      b.onclick=()=>{ if(!alive())return; if(S.meat>=t.cost){S.meat-=t.cost;SFX.buy();S.pets.push({name:t.name,emoji:t.emoji,atk:t.baseAtk,base:t.baseAtk,species:t.name.replace(/^Baby /,"").replace(/^Puppy$/,"Dog"),lvl:1});log(`🐾 A wild <b>${t.name}</b> joins you! It will fight by your side.`);render();drawPanel();} };
+      r.appendChild(b); P.appendChild(r);
+    });
+  } else {
+    P.innerHTML=`<b>How to play</b>
+    <div class="stat">1. Press <b>ATTACK</b> (or Spacebar, <b>E</b> eats meat). You hit, then it hits back. Pets help every round. 12% of your hits crit for ×1.6!</div>
+    <div class="stat">2. Win → next level, stronger animal + <b>🍖meat 🪵materials 🦴skins</b>. HP does <b>not</b> refill — eat meat to heal.</div>
+    <div class="stat">3. 🍖 tames babies (Foxes → Dire Wolves → Sabertooths → Cave Lions → Mammoths...) &amp; feeds them. 🪵 upgrades spear. 🦴 sews clothing/disguises.</div>
+    <div class="stat">4. Every <b>25th level = BOSS</b>: a giant version of a past animal, way stronger. Beat it → new island, cycle restarts stronger.</div>
+    <div class="stat">5. <b>Permadeath:</b> if you die, you die. New caveman starts over from level 1. You have <b>500 HP</b> — eat meat mid-fight to survive bosses!</div>
+    <div class="stat">6. <b>Rank up</b> (Learning 10 → Hunter 25 → Tracker 50 → Beastfriend 75 → Apex 100 → Legend 200): each rank-up hardens your body (+25 max HP), fully heals you, showers gifts, and a wild baby beast joins your pack!</div>`;
+  }
+}
+
+// init
+document.addEventListener("keydown", e=>{ if(e.code==="Space"){ e.preventDefault(); $("btnAttack").click(); } else if(e.code==="KeyE"){ $("btnEat").click(); } });
+$("btnSound").textContent=soundOn?"🔊":"🔇";
+log("🌅 You are a dumb caveman with a <b>stick</b> and <b>rags</b>. Go bonk a lemming! (Tip: Spacebar attacks, E eats meat.)");
+spawn(); drawPanel(); render();
+})();
+</script>
+</body>
+</html>
