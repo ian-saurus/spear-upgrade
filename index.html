@@ -119,6 +119,12 @@
   #stage.bossfight .wall { background:repeating-linear-gradient(90deg,#450a0a 0 30px,#1c1917 30px 33px); color:#fecaca; }
   #stage.bossfight .crowd { background:linear-gradient(180deg,#7f1d1d,#450a0a); }
   #stage.bossfight .torch { font-size:2.4rem; }
+  #tutOverlay { position:fixed; inset:0; background:rgba(28,25,23,.65); display:none; align-items:center; justify-content:center; z-index:50; padding:16px; }
+  #tutCard { background:#fffbeb; border:4px solid #1c1917; border-radius:20px; box-shadow:8px 8px 0 #1c1917; max-width:460px; padding:20px; text-align:center; transform:rotate(-1deg); }
+  #tutMascot { font-size:72px; animation: bounce 1s ease-in-out infinite; }
+  #tutTitle { margin:6px 0; font-size:1.5rem; }
+  #tutText { color:#44403c; }
+  #tutDots { margin:8px 0; letter-spacing:4px; }
   #pSprite.dead { animation:none; transform:rotate(90deg); filter:grayscale(1); transition:transform .5s, filter .5s; }
   #pack.flee .pet { animation: flee .6s forwards; }
   @keyframes flee { to { transform:translateY(-130px); opacity:0; } }
@@ -234,6 +240,19 @@
     <button class="tab" data-tab="help">❓ How to play</button>
   </div>
   <div class="panel" id="panel"></div>
+<div id="tutOverlay">
+  <div id="tutCard">
+    <div id="tutMascot">🧔‍♂️</div>
+    <h2 id="tutTitle"></h2>
+    <p id="tutText"></p>
+    <div id="tutDots"></div>
+    <div>
+      <button class="btn ghost" id="tutBack" type="button">← Back</button>
+      <button class="btn craft" id="tutNext" type="button">Next →</button>
+      <button class="btn ghost" id="tutSkip" type="button">Skip</button>
+    </div>
+  </div>
+</div>
 </main>
 
 <script>
@@ -315,7 +334,7 @@ function rankIdx(l){ let r=0; for(const [t] of TITLES) if(l>=t) r++; return r-1;
 
 // ---------- STATE ----------
 let S;
-function fresh(){ return { level:1, meat:3, mat:0, skins:0, weapon:0, cloth:0, php:500, pets:[], kills:0, dead:false }; }
+function fresh(){ return { level:1, meat:3, mat:0, skins:0, weapon:0, cloth:0, php:500, pets:[], kills:0, dead:false, tutorial:0 }; }
 function load(){ try{ const s = JSON.parse(localStorage.getItem("spearUpgradeSave")); if(s && s.level && !s.dead) return s; }catch(e){} return fresh(); }
 S = load();
 let E = null; // current enemy {hp,max,atk,name,emoji,fam,boss,meat,mat,skins}
@@ -563,6 +582,26 @@ $("btnEat").onclick=()=>{ if(!alive())return; if(S.meat<1){log("No meat! Kill so
 $("btnNew").onclick=()=>{ $("pSprite").classList.remove("dead"); const pk0=$("pack"); if(pk0) pk0.classList.remove("flee"); S=fresh(); $("btnAttack").disabled=false; $("btnAttack").textContent="🗡️ ATTACK!"; log("🌅 A new dumb caveman (500 HP) wakes up with a stick..."); localStorage.removeItem("spearUpgradeSave"); spawn(); render(); };
 $("btnSound").onclick=()=>{ soundOn=!soundOn; $("btnSound").textContent=soundOn?"🔊":"🔇"; try{localStorage.setItem("spearSound",soundOn?"on":"off");}catch(e){} if(soundOn) SFX.buy(); };
 
+const TUT = [
+  { m:"🧔‍♂️", t:"Ungabunga! You are Caveman!", x:"Me smash tasty animals with stick! Press the big red <b>ATTACK!</b> button (or Spacebar). But careful — animal bonks you BACK, so watch your ❤️!" },
+  { m:"🍖", t:"Yummy loot!", x:"Dead beast drops <b>meat, wood and hides</b>. The Hunt Info box tells you exactly what THIS animal gives — and how much you already have." },
+  { m:"🗡️", t:"Get strong!", x:"Spend 🪵 on sharper spears and 🦴 on warm clothes. Wear the skin of an animal's family and your <b>disguise fools it</b> — it hits softer! Spend 🍖 to tame babies who fight beside you, and feed them so they grow: Baby → Young → Teen → Adult!" },
+  { m:"🍖", t:"Eat or die!", x:"HP does <b>NOT</b> refill between fights! Eat meat (+100 HP, green button or E key) or you DIE forever — pack scatters, back to Level 1 with a brand-new dumb caveman!" },
+  { m:"👑", t:"Bosses & new lands!", x:"Every 25th beast is a <b>GIANT boss</b>. Beat it and you sail to a new island with stronger beasts! Rank up (Hunter! Beastfriend! Legend!) for gifts and free pets. Go bonk, legend!" },
+];
+let tutI = 0;
+function showTutorial(){ tutI = 0; drawTut(); $("tutOverlay").style.display = "flex"; }
+function drawTut(){
+  const s = TUT[tutI];
+  $("tutMascot").textContent = s.m; $("tutTitle").textContent = s.t; $("tutText").innerHTML = s.x;
+  $("tutDots").textContent = TUT.map((_,i)=>i===tutI?"🟢":"⚪").join("");
+  $("tutBack").disabled = tutI===0;
+  $("tutNext").textContent = tutI===TUT.length-1 ? "Finish 🎉" : "Next →";
+}
+function closeTut(){ $("tutOverlay").style.display = "none"; S.tutorial = 1; save(); }
+$("tutBack").onclick = ()=>{ if(tutI>0){ tutI--; drawTut(); } };
+$("tutNext").onclick = ()=>{ if(tutI<TUT.length-1){ tutI++; drawTut(); SFX.buy(); } else { SFX.rank(); closeTut(); } };
+$("tutSkip").onclick = ()=>closeTut();
 // ---------- SHOP TABS ----------
 let tab="weapon";
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{ tab=t.dataset.tab;
@@ -722,8 +761,10 @@ function drawPanel(){
     <div class="stat">3. 🍖 tames babies (Foxes → Dire Wolves → Sabertooths → Cave Lions → Mammoths...) &amp; feeds them. 🪵 upgrades spear. 🦴 sews clothing/disguises.</div>
     <div class="stat">4. Every <b>25th level = BOSS</b>: a giant version of a past animal, way stronger. Beat it → new island, cycle restarts stronger.</div>
     <div class="stat">5. <b>Permadeath:</b> if you die, you die. New caveman starts over from level 1. You have <b>500 HP</b> — eat meat mid-fight to survive bosses!</div>
-    <div class="stat">6. <b>Rank up</b> (Learning 10 → Hunter 25 → Tracker 50 → Beastfriend 75 → Apex 100 → Legend 200): each rank-up hardens your body (+25 max HP), fully heals you, showers gifts, and a wild baby beast joins your pack!</div>`;
+    <div class="stat">6. <b>Rank up</b> (Learning 10 → Hunter 25 → Tracker 50 → Beastfriend 75 → Apex 100 → Legend 200): each rank-up hardens your body (+25 max HP), fully heals you, showers gifts, and a wild baby beast joins your pack!</div>
+    <div class="row"><div><b>Want the guided tour?</b><small>Caveman explains everything in 5 steps.</small></div><button class="btn craft" id="btnTutReplay">▶ Tutorial</button></div>`;
   }
+  const rb=$("btnTutReplay"); if(rb) rb.onclick=()=>showTutorial();
 }
 
 // init
@@ -731,6 +772,7 @@ document.addEventListener("keydown", e=>{ if(e.code==="Space"){ e.preventDefault
 $("btnSound").textContent=soundOn?"🔊":"🔇";
 log("🌅 You are a dumb caveman with a <b>stick</b> and <b>rags</b>. Go bonk a lemming! (Tip: Spacebar attacks, E eats meat.)");
 spawn(); drawPanel(); render();
+if(!S.tutorial){ if(S.kills===0 && S.level===1) setTimeout(showTutorial, 700); else { S.tutorial=1; save(); } }
 })();
 </script>
 </body>
