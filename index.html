@@ -621,7 +621,7 @@ function beastSVG(E){
     "Woolly Rhino":{rhino:1,b:"#7a6a5f",d:"#4a3f36",belly:"#a08e7e"},
     "Woolly Mammoth":{mammoth:1,b:"#7a6a5f",d:"#4a3f36",belly:"#a08e7e"},
     "Short-faced Bear":{b:"#e8e0d0",d:"#8a8272",belly:"#f5f0e6",ear:"round",tail:"stub",bulk:1,headR:14}
-  }[E.name]||{b:"#9ca3af",d:"#4b5563",belly:"#d1d5db",ear:"round",tail:"stub"};
+  }[E.prey||E.name]||{b:"#9ca3af",d:"#4b5563",belly:"#d1d5db",ear:"round",tail:"stub"};
   const w = E.boss?190:150;
   const b=L.b, d=L.d, belly=L.belly;
   const shadow=`<ellipse cx="52" cy="68" rx="30" ry="3.5" fill="rgba(28,25,23,.2)"/>`;
