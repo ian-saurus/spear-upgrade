@@ -138,11 +138,11 @@
       <div class="sub">Dumb caveman → Apex hunter. Kill → loot meat, materials &amp; skins → upgrade spear, sew clothing, tame babies.</div>
     </div>
     <div class="badges">
-      <span class="badge">🏝️ Island <span id="bIsland">1</span></span>
-      <span class="badge">⭐ Level <span id="bLevel">1</span></span>
-      <span class="badge">🍖 <span id="bMeat">0</span></span>
-      <span class="badge">🪵 <span id="bMat">0</span></span>
-      <span class="badge">🦴 <span id="bSkin">0</span></span>
+      <span class="badge">🏝️ Island <span id="bIsland">–</span></span>
+      <span class="badge">⭐ Level <span id="bLevel">–</span></span>
+      <span class="badge">🍖 <span id="bMeat">–</span></span>
+      <span class="badge">🪵 <span id="bMat">–</span></span>
+      <span class="badge">🦴 <span id="bSkin">–</span></span>
       <button class="btn ghost" id="btnNew" style="margin:0">↻ New Game</button>
       <button class="btn ghost" id="btnSound" style="margin:0" title="Sound on/off">🔊</button>
     </div>
@@ -152,17 +152,17 @@
     <div class="card" id="playerCard">
       <h2>🧔 YOU — Caveman <span id="pTitle">(Dumb)</span></h2>
     <div class="hpbar"><div class="hpfill php" id="pHpFill" style="width:100%"></div></div>
-      <div class="stat">❤️ HP: <b><span id="pHp">500</span>/<span id="pMax">500</span></b></div>
+      <div class="stat">❤️ HP: <b><span id="pHp">–</span>/<span id="pMax">–</span></b></div>
       <div class="stat">🗡️ Weapon: <b id="pWeapon">Stick</b> (<span id="pAtk">6</span> atk)</div>
       <div class="stat">🥋 Clothing: <b id="pCloth">Rags</b> (<span id="pDef">0</span> def)</div>
       <div class="stat">🐾 Pack: <b id="pPets">none</b></div>
       <div class="disguise" id="disguiseMsg"></div>
-      <button class="btn heal" id="btnEat">🍖 Eat meat (+100 HP, costs 1)</button>
+      <button class="btn heal" id="btnEat">🍖 Eat meat (+25% HP, costs 1)</button>
     </div>
 
     <div class="card" id="arena">
-      <div id="islandBanner">🏝️ Green Meadows — Island 1</div>
-      <div id="enemyName">Lemming</div>
+      <div id="islandBanner">🏝️ …</div>
+      <div id="enemyName">…</div>
       <div id="stage">
         <div class="wall">🏟️ ★ SPEAR ARENA ★ 🏟️</div>
         <div class="crowd" id="crowd">🧑 👩 🧓 👴 👦 👧 🧔</div>
@@ -206,7 +206,7 @@
           </div>
           <div id="vs">⚔️</div>
           <div class="fighter">
-            <div class="fname" id="stageEName">🐹 Lemming</div>
+            <div class="fname" id="stageEName">…</div>
             <div class="minibar"><div class="minifill ehp" id="stageEHp" style="width:100%"></div></div>
             <div class="sprite" id="eSprite">🐹</div>
             <div class="shadow"></div>
@@ -214,20 +214,22 @@
         </div>
         <div class="ground"></div>
       </div>
-      <div class="stat">❤️ <span id="eHp">20</span>/<span id="eMax">20</span> &nbsp; ⚔️ <span id="eAtk">4</span> atk</div>
+      <div class="stat">❤️ <span id="eHp">–</span>/<span id="eMax">–</span> &nbsp; ⚔️ <span id="eAtk">–</span> atk</div>
       <button class="btn attack" id="btnAttack">🗡️ ATTACK!</button>
       <div id="log"></div>
     </div>
 
     <div class="card" id="enemyCard">
       <h2>📜 Hunt Info</h2>
-      <div class="stat">🎯 Target: <b id="infoName">Lemming</b></div>
-      <div class="stat">👪 Family: <b id="infoFam">small</b></div>
+      <div class="stat">🎯 Target: <b id="infoName">…</b></div>
+      <div class="stat">👪 Family: <b id="infoFam">…</b></div>
       <div class="stat">🎁 Loot: <b id="infoLoot">—</b></div>
       <div class="stat">☠️ Danger: <b id="infoDanger">—</b></div>
       <div class="stat">🥊 Your hit: <b id="infoHit">—</b></div>
       <div class="stat">👑 Boss: <b id="infoBoss">—</b></div>
-      <div class="stat">💀 Total kills: <b id="infoKills">0</b></div>
+      <div class="stat">💀 Total kills: <b id="infoKills">–</b></div>
+      <div class="stat">⏱️ Run time: <b id="infoTime">—</b></div>
+      <div class="stat">🏆 Best run: <b id="infoBest">—</b></div>
       <h2 style="margin-top:10px">🐾 Pack (tamed)</h2>
       <div id="packList"><div class="stat">No animals yet. Tame babies with meat!</div></div>
     </div>
@@ -334,9 +336,10 @@ function rankIdx(l){ let r=0; for(const [t] of TITLES) if(l>=t) r++; return r-1;
 
 // ---------- STATE ----------
 let S;
-function fresh(){ return { level:1, meat:3, mat:0, skins:0, weapon:0, cloth:0, php:500, pets:[], kills:0, dead:false, tutorial:0 }; }
+function fresh(){ return { level:1, meat:3, mat:0, skins:0, weapon:0, cloth:0, php:500, pets:[], kills:0, dead:false, tutorial:0, runStart:Date.now() }; }
 function load(){ try{ const s = JSON.parse(localStorage.getItem("spearUpgradeSave")); if(s && s.level && !s.dead) return s; }catch(e){} return fresh(); }
 S = load();
+if(!S.runStart){ S.runStart = Date.now(); }
 let E = null; // current enemy {hp,max,atk,name,emoji,fam,boss,meat,mat,skins}
 
 function island(){ return Math.floor((S.level-1)/25)+1; }
@@ -359,7 +362,7 @@ function title(){ let t=TITLES[0][1]; for(const [l,n] of TITLES) if(S.level>=l) 
 
 function spawn(){
   const L = S.level, isl = island();
-  const islMult = Math.pow(1.5, isl-1);
+  const islMult = Math.pow(1.55, isl-1);
   const boss = isBoss(L);
   const base = boss ? bossBase(L) : animalFor(L);
   let max = Math.round((18 + L*8) * islMult);
@@ -449,6 +452,8 @@ function render(){
     $("infoDanger").textContent = E.boss? "BOSS — huge & furious!" : (E.atk>playerAtk()? "Stronger than you — upgrade!":"You can take it!");
     $("infoHit").textContent = "~"+(playerAtk()+1+petDmg())+" per hit (12% crit ×1.6)";
     $("infoKills").textContent = S.kills;
+    $("infoTime").textContent = fmtTime(Date.now()-(S.runStart||Date.now()));
+    $("infoBest").textContent = BEST.level? ("Lv "+BEST.level+" · "+BEST.kills+" kills") : "—";
     { const _m = S.level % 25;
       $("infoBoss").textContent = _m===0 ? "👑 NOW — good luck!" : `in ${25-_m} (Lv ${S.level+(25-_m)})`; }
     $("disguiseMsg").textContent = disguised()? "🥸 Disguise works! Looks like "+E.fam+" — takes 30% less damage." : "";
@@ -466,6 +471,9 @@ function render(){
   save();
   drawPanel(); // keep shop buttons/prices in sync after every kill, meal, or feed
 }
+let BEST={level:0,kills:0}; try{ const _b=JSON.parse(localStorage.getItem("spearBest")); if(_b&&_b.level)BEST=_b; }catch(e){}
+function fmtTime(ms){ const s=Math.floor(ms/1000), h=Math.floor(s/3600), m=Math.floor(s%3600/60), ss=s%60; return (h>0?h+":"+String(m).padStart(2,"0")+":":"")+String(m).padStart(h>0?2:1,"0")+":"+String(ss).padStart(2,"0"); }
+function noteBest(){ if(S.level>BEST.level||(S.level===BEST.level&&S.kills>BEST.kills)){ BEST={level:S.level,kills:S.kills}; try{localStorage.setItem("spearBest",JSON.stringify(BEST));}catch(e){} } }
 function save(){ localStorage.setItem("spearUpgradeSave", JSON.stringify(S)); }
 
 // ---------- COMBAT ----------
@@ -536,7 +544,7 @@ function victory(){
   S.meat+=E.meat; S.mat+=E.mat; S.skins+=E.skins; S.kills++;
   const wasBoss = E.boss;
   const oldRank = rankIdx(S.level);
-  S.level++;
+  S.level++; noteBest();
   const newRank = rankIdx(S.level);
   // no free heal — damage persists until you eat meat or sew new clothing
   if(newRank>oldRank){
@@ -560,7 +568,7 @@ function victory(){
   if(wasBoss) log(`🌊 Landed on <b>${islandName()}</b>!`);
 }
 function gameOver(){
-  S.dead = true;
+  S.dead = true; noteBest();
   $("pSprite").classList.add("dead");
   dmgFloat($("pSprite"), "RIP 💀", "#1c1917");
   log(`☠️ <b>YOU DIED to ${E.name} at level ${S.level} with ${S.kills} kills. Permadeath — that caveman is gone.</b>`);
@@ -578,15 +586,15 @@ function gameOver(){
   save();
   setTimeout(()=>{ S.pets=[]; save(); render(); }, 700);
 }
-$("btnEat").onclick=()=>{ if(!alive())return; if(S.meat<1){log("No meat! Kill something first.");return;} if(S.php>=playerMaxHp()){log("Already full HP.");return;} S.meat--; S.php=Math.min(playerMaxHp(),S.php+100); dmgFloat($("pSprite"), "YUM! +100", "#16a34a"); SFX.eat(); log("🍖 Yum! +100 HP."); render(); };
-$("btnNew").onclick=()=>{ $("pSprite").classList.remove("dead"); const pk0=$("pack"); if(pk0) pk0.classList.remove("flee"); S=fresh(); $("btnAttack").disabled=false; $("btnAttack").textContent="🗡️ ATTACK!"; log("🌅 A new dumb caveman (500 HP) wakes up with a stick..."); localStorage.removeItem("spearUpgradeSave"); spawn(); render(); };
+$("btnEat").onclick=()=>{ if(!alive())return; if(S.meat<1){log("No meat! Kill something first.");return;} const hm=Math.round(playerMaxHp()*0.25); if(S.php>=playerMaxHp()){log("Already full HP.");return;} S.meat--; S.php=Math.min(playerMaxHp(),S.php+hm); dmgFloat($("pSprite"), "YUM! +"+hm, "#16a34a"); SFX.eat(); log("🍖 Yum! +"+hm+" HP."); render(); };
+$("btnNew").onclick=()=>{ if(!confirm("Start over as a brand-new dumb caveman? Your hunter, pack, spear and furs will be gone FOREVER!"))return; $("pSprite").classList.remove("dead"); const pk0=$("pack"); if(pk0) pk0.classList.remove("flee"); S=fresh(); $("btnAttack").disabled=false; $("btnAttack").textContent="🗡️ ATTACK!"; log("🌅 A new dumb caveman (500 HP) wakes up with a stick..."); localStorage.removeItem("spearUpgradeSave"); spawn(); render(); };
 $("btnSound").onclick=()=>{ soundOn=!soundOn; $("btnSound").textContent=soundOn?"🔊":"🔇"; try{localStorage.setItem("spearSound",soundOn?"on":"off");}catch(e){} if(soundOn) SFX.buy(); };
 
 const TUT = [
   { m:"🧔‍♂️", t:"Ungabunga! You are Caveman!", x:"Me smash tasty animals with stick! Press the big red <b>ATTACK!</b> button (or Spacebar). But careful — animal bonks you BACK, so watch your ❤️!" },
   { m:"🍖", t:"Yummy loot!", x:"Dead beast drops <b>meat, wood and hides</b>. The Hunt Info box tells you exactly what THIS animal gives — and how much you already have." },
   { m:"🗡️", t:"Get strong!", x:"Spend 🪵 on sharper spears and 🦴 on warm clothes. Wear the skin of an animal's family and your <b>disguise fools it</b> — it hits softer! Spend 🍖 to tame babies who fight beside you, and feed them so they grow: Baby → Young → Teen → Adult!" },
-  { m:"🍖", t:"Eat or die!", x:"HP does <b>NOT</b> refill between fights! Eat meat (+100 HP, green button or E key) or you DIE forever — pack scatters, back to Level 1 with a brand-new dumb caveman!" },
+  { m:"🍖", t:"Eat or die!", x:"HP does <b>NOT</b> refill between fights! Eat meat (+25% HP, green button or E key) or you DIE forever — pack scatters, back to Level 1 with a brand-new dumb caveman!" },
   { m:"👑", t:"Bosses & new lands!", x:"Every 25th beast is a <b>GIANT boss</b>. Beat it and you sail to a new island with stronger beasts! Rank up (Hunter! Beastfriend! Legend!) for gifts and free pets. Go bonk, legend!" },
 ];
 let tutI = 0;
@@ -773,6 +781,7 @@ $("btnSound").textContent=soundOn?"🔊":"🔇";
 log("🌅 You are a dumb caveman with a <b>stick</b> and <b>rags</b>. Go bonk a lemming! (Tip: Spacebar attacks, E eats meat.)");
 spawn(); drawPanel(); render();
 if(!S.tutorial){ if(S.kills===0 && S.level===1) setTimeout(showTutorial, 700); else { S.tutorial=1; save(); } }
+setInterval(()=>{ const el=$("infoTime"); if(el&&S&&S.runStart) el.textContent=fmtTime(Date.now()-S.runStart); },1000);
 })();
 </script>
 </body>
