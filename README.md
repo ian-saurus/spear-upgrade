@@ -1,5 +1,7 @@
 # 🗡️ Spear Upgrade
 
+![Gameplay preview](preview.png)
+
 A cartoon Ice Age caveman hunting game. Kill beasts, loot meat/materials/hides,
 upgrade your spear, sew disguises, tame baby animals that fight beside you.
 Boss every 25 levels, new island after each boss, permadeath throughout.
