@@ -531,6 +531,7 @@ const SFX = {
   win(){ [523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,0.12,"triangle",0.08),i*90)); },
   rank(){ [392,523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.14,"triangle",0.09),i*80)); },
   death(){ tone(300,0.4,"sawtooth",0.09,-220); },
+  test(){ tone(523,0.1,"sine",0.09); setTimeout(()=>tone(659,0.1,"sine",0.09),110); setTimeout(()=>tone(784,0.16,"sine",0.09),220); },
   buy(){ tone(700,0.07,"sine",0.07); setTimeout(()=>tone(1000,0.1,"sine",0.07),70); },
   boss(){ tone(80,0.5,"sawtooth",0.1,-30); setTimeout(()=>tone(120,0.4,"sawtooth",0.09),150); }
 };
@@ -565,7 +566,7 @@ function musicStep(){
   mStep++;
   setTimeout(musicStep, STEP_DUR*1000);
 }
-function startMusic(){ if(musicStarted) return; musicStarted=true; setTimeout(musicStep, 100); }
+function startMusic(){ if(musicStarted) return; musicStarted=true; try{ AC = AC || new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==="suspended") AC.resume(); }catch(e){} setTimeout(musicStep, 100); }
 document.addEventListener("pointerdown", startMusic);
 document.addEventListener("keydown", startMusic);
 function alive(){ if(S.dead){ log("☠️ You're dead — hit ↻ New Game for a fresh caveman."); return false; } return true; }
@@ -660,7 +661,7 @@ function gameOver(){
 }
 $("btnEat").onclick=()=>{ if(!alive())return; if(S.meat<1){log("No meat! Kill something first.");return;} const hm=Math.round(playerMaxHp()*0.25); if(S.php>=playerMaxHp()){log("Already full HP.");return;} S.meat--; S.php=Math.min(playerMaxHp(),S.php+hm); dmgFloat($("pSprite"), "YUM! +"+hm, "#16a34a"); SFX.eat(); bigEvent("🍖 +"+hm+" HP!"); log("🍖 Yum! +"+hm+" HP."); render(); };
 $("btnNew").onclick=()=>{ if(!confirm("Start over as a brand-new dumb caveman? Your hunter, pack, spear and furs will be gone FOREVER!"))return; $("pSprite").classList.remove("dead"); const pk0=$("pack"); if(pk0) pk0.classList.remove("flee"); S=fresh(); $("btnAttack").disabled=false; $("btnAttack").textContent="🗡️ ATTACK!"; log("🌅 A new dumb caveman (500 HP) wakes up with a stick..."); localStorage.removeItem("spearUpgradeSave"); spawn(); render(); };
-$("btnSound").onclick=()=>{ soundOn=!soundOn; $("btnSound").textContent=soundOn?"🔊":"🔇"; try{localStorage.setItem("spearSound",soundOn?"on":"off");}catch(e){} if(soundOn) SFX.buy(); };
+$("btnSound").onclick=()=>{ soundOn=!soundOn; $("btnSound").textContent=soundOn?"🔊":"🔇"; try{localStorage.setItem("spearSound",soundOn?"on":"off");}catch(e){} if(soundOn) SFX.test(); };
 
 const TUT = [
   { m:"🧔‍♂️", t:"Ungabunga! You are Caveman!", x:"Me smash tasty animals with stick! Press the big red <b>ATTACK!</b> button (or Spacebar). But careful — animal bonks you BACK, so watch your ❤️!" },
