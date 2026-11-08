@@ -48,18 +48,19 @@
   .btn { border:3px solid #1c1917; border-radius:14px; padding:10px 14px; font:inherit; font-weight:700; cursor:pointer; margin:4px 4px 4px 0; box-shadow:0 4px 0 #1c1917; transition:transform .05s; }
   .btn:active:not(:disabled){ transform:translateY(4px); box-shadow:none; }
   .btn:disabled { opacity:.4; cursor:not-allowed; }
+  button:focus-visible, .tab:focus-visible { outline:3px solid #0ea5e9; outline-offset:2px; }
   .attack { background:#ef4444; color:#fff; font-size:1.4rem; width:100%; text-shadow:2px 2px 0 #1c1917; }
   .attack:hover:not(:disabled){ background:#f87171; }
-  .heal { background:#22c55e; color:#fff; }
-  .craft { background:#f59e0b; color:#fff; font-size:.85rem; }
-  .tame { background:#a855f7; color:#fff; font-size:.85rem; }
+  .heal { background:#15803d; color:#fff; }
+  .craft { background:#f59e0b; color:#1c1917; font-size:.85rem; }
+  .tame { background:#7e22ce; color:#fff; font-size:.85rem; }
   .ghost { background:#fff; color:#1c1917; font-size:.8rem; }
   .tabs { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
   .tab { background:#fff; color:#1c1917; border:3px solid #1c1917; border-radius:14px 14px 0 0; border-bottom:none; padding:8px 14px; cursor:pointer; font-weight:700; font-family:inherit; }
   .tab.active { background:#fbbf24; transform:rotate(-1deg); }
   .panel { background:#fffbeb; border:3px solid #1c1917; border-radius:0 18px 18px 18px; padding:12px; min-height:180px; box-shadow:5px 5px 0 #1c1917; }
   .row { display:flex; justify-content:space-between; align-items:center; background:#fef9c3; border:2px solid #1c1917; border-radius:12px; padding:8px; margin:6px 0; gap:8px; flex-wrap:wrap;}
-  .row small { color:#78716c; display:block; }
+  .row small { color:#57534c; display:block; }
   .shake { animation: shake .3s; }
   @keyframes shake { 0%,100%{transform:translateX(0) rotate(0)} 25%{transform:translateX(-8px) rotate(-2deg)} 75%{transform:translateX(8px) rotate(2deg)} }
   .float-dmg { position:absolute; font-weight:700; font-size:2.6rem; pointer-events:none; animation: floatUp 1s forwards; z-index:5; -webkit-text-stroke:1px #1c1917; paint-order:stroke fill; text-shadow:2px 2px 0 #1c1917; white-space:nowrap; }
@@ -89,7 +90,7 @@
   @keyframes drift { to { transform:translateX(420px); } }
   .fighters { display:flex; align-items:flex-end; justify-content:space-around; padding:20px 8px 0; position:relative; z-index:2; min-height:330px; margin-bottom:-58px; }
   .fighter { display:flex; flex-direction:column; align-items:center; }
-  .fname { background:#fff; border:3px solid #1c1917; border-radius:12px; font-size:1.05rem; font-weight:700; padding:2px 14px; max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fname { background:#fff; border:3px solid #1c1917; border-radius:12px; font-size:1.05rem; font-weight:700; padding:2px 14px; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .minibar { width:210px; height:20px; background:#fff; border:3px solid #1c1917; border-radius:10px; overflow:hidden; margin:6px 0 2px; }
   .minifill { height:100%; transition:width .25s; }
   #stage #vs { align-self:center; }
@@ -144,7 +145,7 @@
       <span class="badge">🪵 <span id="bMat">–</span></span>
       <span class="badge">🦴 <span id="bSkin">–</span></span>
       <button class="btn ghost" id="btnNew" style="margin:0">↻ New Game</button>
-      <button class="btn ghost" id="btnSound" style="margin:0" title="Sound on/off">🔊</button>
+      <button class="btn ghost" id="btnSound" style="margin:0" title="Sound on/off" aria-label="Toggle sound on or off">🔊</button>
     </div>
   </div>
 
@@ -458,9 +459,10 @@ function render(){
     $("arena").classList.toggle("boss", E.boss);
     $("stage").classList.toggle("bossfight", E.boss);
     $("eSprite").innerHTML='<span class="face">'+beastSVG(E)+'</span>';
+    { const _es=$("eSprite").querySelector("svg"); if(_es){ _es.setAttribute("role","img"); _es.setAttribute("aria-label",E.name); } }
     $("eHp").textContent=E.hp; $("eMax").textContent=E.max; $("eAtk").textContent=E.atk;
     $("stageEHp").style.width=(100*E.hp/E.max)+"%";
-    $("stageEName").textContent=E.emoji+" "+E.name;
+    $("stageEName").textContent=E.emoji+" "+E.name; $("stageEName").title=E.name;
     $("infoName").textContent=E.name; $("infoFam").textContent=E.fam;
     $("infoLoot").textContent=`🍖${E.meat} meat (you: ${S.meat}) · 🪵${E.mat} (you: ${S.mat}) · 🦴${E.skins} hide (you: ${S.skins})`;
     $("infoDanger").textContent = E.boss? "BOSS — huge & furious!" : (E.atk>playerAtk()? "Stronger than you — upgrade!":"You can take it!");
