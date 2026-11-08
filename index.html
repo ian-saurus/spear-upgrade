@@ -18,6 +18,7 @@
   .topbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
   .badges { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .badge { background:#fff; border:3px solid #1c1917; border-radius:20px; padding:4px 12px; font-weight:700; font-size:.85rem; box-shadow:2px 2px 0 #1c1917; }
+  #beatDot { display:inline-block; transition:opacity .12s; }
   .layout { display:grid; grid-template-columns: 1fr 2.6fr 1fr; gap:14px; margin-top:12px; }
   @media (max-width:760px){ .layout{grid-template-columns:1fr;} }
   .card { background:#fffbeb; border:3px solid #1c1917; border-radius:20px; padding:12px; box-shadow:5px 5px 0 #1c1917; }
@@ -151,6 +152,7 @@
       <span class="badge">🪵 <span id="bMat">–</span></span>
       <span class="badge">🦴 <span id="bSkin">–</span></span>
       <button class="btn ghost" id="btnNew" style="margin:0">↻ New Game</button>
+      <span class="badge" id="beatDot" title="Music beat">🎵</span>
       <button class="btn ghost" id="btnSound" style="margin:0" title="Sound on/off" aria-label="Toggle sound on or off">🔊</button>
     </div>
   </div>
@@ -532,6 +534,40 @@ const SFX = {
   buy(){ tone(700,0.07,"sine",0.07); setTimeout(()=>tone(1000,0.1,"sine",0.07),70); },
   boss(){ tone(80,0.5,"sawtooth",0.1,-30); setTimeout(()=>tone(120,0.4,"sawtooth",0.09),150); }
 };
+// tribal background loop (no audio files — all synthesized)
+let musicStarted=false, mStep=0;
+const STEP_DUR=60/132/2;
+const LEAD=[0,-1,3,5,-1,3,0,-1,7,-1,5,3,0,-1,-1,-1,0,-1,3,5,-1,7,10,-1,12,-1,10,7,5,3,0,-1];
+const BAROOT=[0,0,3,-2];
+function mnote(semi, t, d, type, v){
+  const o=AC.createOscillator(), g=AC.createGain();
+  o.type=type; o.frequency.value=110*Math.pow(2,semi/12);
+  g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+  o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t+d+0.02);
+}
+function musicStep(){
+  if(!musicStarted) return;
+  const bd=document.getElementById("beatDot");
+  if(!soundOn){ if(bd) bd.style.opacity="0.25"; setTimeout(musicStep, 300); return; }
+  if(!document.hidden){
+    try{
+      AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+      if(AC.state==="suspended") AC.resume();
+      const t=AC.currentTime+0.05, s=mStep%32, bar=(mStep>>3)%4;
+      if(bd) bd.style.opacity=(s%2===0)?"1":"0.45";
+      const L=LEAD[s];
+      if(L>=0) mnote(L, t, STEP_DUR*0.9, "triangle", 0.035);
+      if(s%2===0) mnote(BAROOT[bar]+(s%8===6?7:0)-12, t, STEP_DUR*0.8, "sine", 0.05);
+      if(s%8===0||s%8===4) mnote(-12, t, 0.12, "sine", 0.09);
+      if(s%2===1) mnote(43, t, 0.03, "square", 0.008);
+    }catch(e){}
+  }
+  mStep++;
+  setTimeout(musicStep, STEP_DUR*1000);
+}
+function startMusic(){ if(musicStarted) return; musicStarted=true; setTimeout(musicStep, 100); }
+document.addEventListener("pointerdown", startMusic);
+document.addEventListener("keydown", startMusic);
 function alive(){ if(S.dead){ log("☠️ You're dead — hit ↻ New Game for a fresh caveman."); return false; } return true; }
 $("btnAttack").onclick = () => {
   if(!E || S.php<=0 || !alive()) return;
@@ -806,13 +842,14 @@ function drawPanel(){
     <div class="stat">4. Every <b>25th level = BOSS</b>: a giant version of a past animal, way stronger. Beat it → new island, cycle restarts stronger.</div>
     <div class="stat">5. <b>Permadeath:</b> if you die, you die. New caveman starts over from level 1. You have <b>500 HP</b> — eat meat mid-fight to survive bosses!</div>
     <div class="stat">6. <b>Rank up</b> (Learning 10 → Hunter 25 → Tracker 50 → Beastfriend 75 → Apex 100 → Legend 200): each rank-up hardens your body (+25 max HP), fully heals you, showers gifts, and a wild baby beast joins your pack!</div>
-    <div class="row"><div><b>Want the guided tour?</b><small>Caveman explains everything in 5 steps.</small></div><button class="btn craft" id="btnTutReplay">▶ Tutorial</button></div>`;
+    <div class="row"><div><b>Want the guided tour?</b><small>Caveman explains everything in 5 steps.</small></div><button class="btn craft" id="btnTutReplay">▶ Tutorial</button></div>
+    <div class="stat">🎵 tribal drums play automatically. <b>M</b> or 🔊 mutes everything.</div>`;
   }
   const rb=$("btnTutReplay"); if(rb) rb.onclick=()=>showTutorial();
 }
 
 // init
-document.addEventListener("keydown", e=>{ if(e.code==="Space"){ e.preventDefault(); $("btnAttack").click(); } else if(e.code==="KeyE"){ $("btnEat").click(); } });
+document.addEventListener("keydown", e=>{ if(e.code==="Space"){ e.preventDefault(); $("btnAttack").click(); } else if(e.code==="KeyE"){ $("btnEat").click(); } else if(e.code==="KeyM"){ $("btnSound").click(); } });
 $("btnSound").textContent=soundOn?"🔊":"🔇";
 log("🌅 You are a dumb caveman with a <b>stick</b> and <b>rags</b>. Go bonk a lemming! (Tip: Spacebar attacks, E eats meat.)");
 spawn(); drawPanel(); render();
