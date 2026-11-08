@@ -364,10 +364,9 @@ function animalFor(level){
   return ANIMALS[idx];
 }
 function isBoss(level){ return level % 25 === 0; }
-function bossBase(level){ // boss copies an animal from past 24 levels, bigger+stronger
-  const back = 1 + ((level-2) % 24);
-  const lvl = level - back;
-  return animalFor(lvl);
+function bossBase(level){ // a random beast from the past 24 levels, way bigger and stronger
+  const back = 1 + Math.floor(Math.random()*24);
+  return animalFor(Math.max(1, level - back));
 }
 function playerMaxHp(){ return 500 + S.cloth*30 + S.level*4 + (S.vigor||0)*25; }
 function playerAtk(){ return WEAPONS[S.weapon].atk + Math.floor(S.level/10)*2; }
