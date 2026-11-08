@@ -43,7 +43,7 @@
   #enemyName.bossName { color:#dc2626; animation: blink 0.8s infinite alternate; }
   @keyframes blink { from{opacity:1; transform:scale(1)} to{opacity:.65; transform:scale(1.06)} }
   #vs { font-size:2.2rem; margin:4px 0; animation: bounce .8s ease-in-out infinite; }
-  #log { height:150px; overflow-y:auto; background:#fff; border:3px solid #1c1917; border-radius:14px; padding:8px; font-size:.85rem; margin-top:8px; }
+  #log { height:80px; overflow-y:auto; background:#fff; border:3px solid #1c1917; border-radius:14px; padding:8px; font-size:.85rem; margin-top:8px; }
   #log div { margin:2px 0; }
   .btn { border:3px solid #1c1917; border-radius:14px; padding:10px 14px; font:inherit; font-weight:700; cursor:pointer; margin:4px 4px 4px 0; box-shadow:0 4px 0 #1c1917; transition:transform .05s; }
   .btn:active:not(:disabled){ transform:translateY(4px); box-shadow:none; }
@@ -111,6 +111,7 @@
     .pack { max-width:160px; }
     .pet svg { max-width:64px; }
     .float-dmg { font-size:1.6rem; }
+    #bigEvent { font-size:1.1rem; }
     .cloud { display:none; }
   }
   #playerCard.lowhp .hpbar { animation: lowpulse .45s infinite alternate; border-color:#dc2626; }
@@ -126,6 +127,11 @@
   #tutTitle { margin:6px 0; font-size:1.5rem; }
   #tutText { color:#44403c; }
   #tutDots { margin:8px 0; letter-spacing:4px; }
+  #bigEvent { font-size:1.35rem; font-weight:700; text-align:center; margin:8px 0 0; min-height:2em; }
+  #bigEvent.pop { animation: pop .3s; }
+  @keyframes pop { 0%{transform:scale(.7)} 40%{transform:scale(1.15)} 100%{transform:scale(1)} }
+  .btn.heal.urgent { animation: urgentPulse .5s infinite; font-size:1.15rem; border-color:#dc2626; }
+  @keyframes urgentPulse { 0%,100%{transform:scale(1); box-shadow:0 4px 0 #1c1917;} 50%{transform:scale(1.08); box-shadow:0 4px 0 #dc2626, 0 0 18px #ef4444;} }
   #pSprite.dead { animation:none; transform:rotate(90deg); filter:grayscale(1); transition:transform .5s, filter .5s; }
   #pack.flee .pet { animation: flee .6s forwards; }
   @keyframes flee { to { transform:translateY(-130px); opacity:0; } }
@@ -222,6 +228,7 @@
       </div>
       <div class="stat">❤️ <span id="eHp">–</span>/<span id="eMax">–</span> &nbsp; ⚔️ <span id="eAtk">–</span> atk</div>
       <button class="btn attack" id="btnAttack">🗡️ ATTACK!</button>
+      <div id="bigEvent">⚔️ FIGHT!</div>
       <div id="log"></div>
     </div>
 
@@ -393,8 +400,10 @@ function spawn(){
   if(S.php<=0 || S.php>playerMaxHp()) S.php = playerMaxHp();
   S.php = Math.min(S.php, playerMaxHp());
   setCrowd(boss?"scared":"idle");
+  if(!boss && Math.random()<0.35) setTimeout(()=>dmgFloat($("eSprite"), pick(TAUNTS), "#ffffff"), 500);
   if(boss) log(`👑 <b>A GIANT ${base.name.toUpperCase()} blocks your path!</b> The crowd gasps... good luck!`);
   if(boss) SFX.boss();
+  if(boss) bigEvent("👑 BOSS FIGHT! 👑");
   render();
 }
 
@@ -416,6 +425,8 @@ function dmgFloat(el, txt, color){ const r=el.getBoundingClientRect(), a=$("aren
 const HIT_WORDS = ["BONK!","POW!","SMASH!","WHAM!","THWACK!","SPLAT!"];
 const HURT_WORDS = ["OUCH!","CHOMP!","RAWR!","GNASH!","YOW!"];
 const pick = a => a[Math.floor(Math.random()*a.length)];
+const TAUNTS = ["RAWR!","GRRR!","I'M HUNGRY!","YOU LOOK TASTY!","*SNIFF SNIFF*","BRING IT!","MINE!","SNARL!"];
+function bigEvent(html){ const el=$("bigEvent"); el.innerHTML=html; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
 function poke(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(()=>el.classList.remove(cls),400); }
 
 function disguised(){
@@ -444,6 +455,7 @@ function render(){
   const lowHp = S.php < pm*0.25;
   $("playerCard").classList.toggle("lowhp", lowHp);
   $("stagePHp").parentElement.classList.toggle("low", lowHp);
+  $("btnEat").classList.toggle("urgent", lowHp && !S.dead);
   $("pWeapon").textContent=WEAPONS[S.weapon].name; $("pAtk").textContent=playerAtk();
   $("pCloth").textContent=CLOTHES[S.cloth].name; $("pDef").textContent=playerDef();
   $("pTitle").textContent=title();
@@ -535,6 +547,7 @@ $("btnAttack").onclick = () => {
   document.querySelectorAll("#pack .pet").forEach((el,i)=>setTimeout(()=>poke(el,"hop"), i*60));
   dmgFloat($("eSprite"), (crit?"CRIT ":"")+pick(HIT_WORDS)+" -"+dmg, crit?"#fde047":"#fbbf24");
   crit?SFX.crit():SFX.hit();
+  bigEvent((crit?"⭐ CRIT ":"")+"🗡️ -"+dmg+"!");
   log(`🗡️ You hit <b>${E.name}</b> for <b>${dmg}</b>${crit?" <b>CRITICAL!</b>":""}${pets?` (incl. ${pets} from pack)`:""}.`);
   if(E.hp<=0){ victory(); return; }
   // enemy hits back
@@ -547,14 +560,19 @@ $("btnAttack").onclick = () => {
   poke($("eSprite"),"lunge"); poke($("pSprite"),"squash");
   dmgFloat($("pSprite"), pick(HURT_WORDS)+" -"+ed, "#ef4444");
   SFX.hurt();
+  bigEvent("💥 -"+ed+"!");
   $("playerCard").classList.remove("shake"); void $("playerCard").offsetWidth; $("playerCard").classList.add("shake");
   log(`💥 ${E.name} bites back for <b>${ed}</b>.${disguised()?" (disguise fooled it!)":""}`);
-  if(!wasLowHp && S.php>0 && S.php < playerMaxHp()*0.25) log(`⚠️ <b>LOW HP!</b> Eat meat (🍖 button above) or this caveman dies!`);
+  if(!wasLowHp && S.php>0 && S.php < playerMaxHp()*0.25){ bigEvent("⚠️ EAT MEAT! [E]"); log(`⚠️ <b>LOW HP!</b> Eat meat (🍖 button above) or this caveman dies!`); }
   if(S.php<=0){ S.php=0; render(); gameOver(); return; }
   render();
 };
 function victory(){
-  log(`✅ <b>Defeated ${E.name}!</b> +🍖${E.meat} meat, +🪵${E.mat}, +🦴${E.skins} hide.`);
+  const over = Math.max(0, -E.hp);
+  const bonus = Math.min(20, Math.floor(over/10));
+  if(bonus>0) S.meat += bonus;
+  log(`✅ <b>Defeated ${E.name}!</b> +🍖${E.meat} meat, +🪵${E.mat}, +🦴${E.skins} hide.${bonus>0?` <b>OVERKILL! +${bonus}🍖!</b>`:""}`);
+  bigEvent(`✅ +🍖${E.meat} 🪵${E.mat} 🦴${E.skins}${bonus>0?` 💥OVERKILL +${bonus}🍖`:""}`);
   setCrowd("cheer");
   SFX.win();
   S.meat+=E.meat; S.mat+=E.mat; S.skins+=E.skins; S.kills++;
@@ -577,6 +595,7 @@ function victory(){
     S.php=playerMaxHp();
     log(`🎉 <b>RANK UP! You are now ${title()}!</b> Body hardened (+25 max HP), fully healed, +🍖${gm} +🪵${gw} +🦴${gs}.${petMsg}`);
     dmgFloat($("pSprite"), "RANK UP!", "#fbbf24");
+    bigEvent("🎉 RANK UP!");
     SFX.rank();
   }
   if(wasBoss) log(`🎉 <b>BOSS SLAIN! You sail to a new island...</b> Next beasts are stronger than before, but weaker than the boss. 🏝️`);
@@ -587,6 +606,7 @@ function gameOver(){
   S.dead = true; noteBest();
   $("pSprite").classList.add("dead");
   dmgFloat($("pSprite"), "RIP 💀", "#1c1917");
+  bigEvent("☠️ YOU DIED");
   log(`☠️ <b>YOU DIED to ${E.name} at level ${S.level} with ${S.kills} kills. Permadeath — that caveman is gone.</b>`);
   if(S.pets.length){
     const n=S.pets.length;
@@ -602,7 +622,7 @@ function gameOver(){
   save();
   setTimeout(()=>{ S.pets=[]; save(); render(); }, 700);
 }
-$("btnEat").onclick=()=>{ if(!alive())return; if(S.meat<1){log("No meat! Kill something first.");return;} const hm=Math.round(playerMaxHp()*0.25); if(S.php>=playerMaxHp()){log("Already full HP.");return;} S.meat--; S.php=Math.min(playerMaxHp(),S.php+hm); dmgFloat($("pSprite"), "YUM! +"+hm, "#16a34a"); SFX.eat(); log("🍖 Yum! +"+hm+" HP."); render(); };
+$("btnEat").onclick=()=>{ if(!alive())return; if(S.meat<1){log("No meat! Kill something first.");return;} const hm=Math.round(playerMaxHp()*0.25); if(S.php>=playerMaxHp()){log("Already full HP.");return;} S.meat--; S.php=Math.min(playerMaxHp(),S.php+hm); dmgFloat($("pSprite"), "YUM! +"+hm, "#16a34a"); SFX.eat(); bigEvent("🍖 +"+hm+" HP!"); log("🍖 Yum! +"+hm+" HP."); render(); };
 $("btnNew").onclick=()=>{ if(!confirm("Start over as a brand-new dumb caveman? Your hunter, pack, spear and furs will be gone FOREVER!"))return; $("pSprite").classList.remove("dead"); const pk0=$("pack"); if(pk0) pk0.classList.remove("flee"); S=fresh(); $("btnAttack").disabled=false; $("btnAttack").textContent="🗡️ ATTACK!"; log("🌅 A new dumb caveman (500 HP) wakes up with a stick..."); localStorage.removeItem("spearUpgradeSave"); spawn(); render(); };
 $("btnSound").onclick=()=>{ soundOn=!soundOn; $("btnSound").textContent=soundOn?"🔊":"🔇"; try{localStorage.setItem("spearSound",soundOn?"on":"off");}catch(e){} if(soundOn) SFX.buy(); };
 
