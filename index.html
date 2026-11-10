@@ -153,6 +153,7 @@
       <span class="badge">🍖 <span id="bMeat">–</span></span>
       <span class="badge">🪵 <span id="bMat">–</span></span>
       <span class="badge">🦴 <span id="bSkin">–</span></span>
+      <span class="badge" title="Online account">👤 <span id="bAcct">Guest</span></span>
       <button class="btn ghost" id="btnNew" style="margin:0">↻ New Game</button>
       <span class="badge" id="beatDot" title="Music beat">🎵</span>
       <button class="btn ghost" id="btnSound" style="margin:0" title="Sound on/off" aria-label="Toggle sound on or off">🔊</button>
@@ -258,6 +259,7 @@
     <button class="tab" data-tab="cloth">🥋 Sew Clothing</button>
     <button class="tab" data-tab="tame">🐾 Tame / Feed Babies</button>
     <button class="tab" data-tab="fame">🏆 Hall of Fame</button>
+    <button class="tab" data-tab="account">👤 Account</button>
     <button class="tab" data-tab="help">❓ How to play</button>
   </div>
   <div class="panel" id="panel"></div>
@@ -365,7 +367,7 @@ function rankIdx(l){ let r=0; for(const [t] of TITLES) if(l>=t) r++; return r-1;
 
 // ---------- STATE ----------
 let STORE;
-function fresh(name, skipTut){ return { name:name||"Caveman", level:1, meat:3, mat:0, skins:0, weapon:0, cloth:0, php:500, pets:[], kills:0, dead:false, tutorial:skipTut?1:0, runStart:Date.now(), vigor:0, best:{level:1,kills:0} }; }
+function fresh(name, skipTut){ return { name:name||"Caveman", level:1, meat:3, mat:0, skins:0, weapon:0, cloth:0, php:500, pets:[], kills:0, bosses:0, dead:false, tutorial:skipTut?1:0, runStart:Date.now(), vigor:0, best:{level:1,kills:0} }; }
 function loadAll(){
   try{
     const P = JSON.parse(localStorage.getItem("spearProfiles"));
@@ -386,6 +388,7 @@ S = STORE.profiles[STORE.activeId];
 if(!S.runStart){ S.runStart = Date.now(); }
 if(!S.best){ S.best = {level:S.level||1, kills:S.kills||0}; }
 if(!S.name){ S.name = "Caveman"; }
+if(S.bosses==null){ S.bosses = 0; }
 if(S.vigor==null){ S.vigor = 0; }
 let E = null; // current enemy {hp,max,atk,name,emoji,fam,boss,meat,mat,skins}
 
@@ -471,6 +474,7 @@ function paintCaveman(){
 function render(){
   $("bIsland").textContent=island(); $("bLevel").textContent=S.level;
   $("bMeat").textContent=S.meat; $("bMat").textContent=S.mat; $("bSkin").textContent=S.skins;
+  $("bAcct").textContent=(ME&&ME.user)||"Guest";
   const pm = playerMaxHp();
   if(S.php>pm) S.php=pm;
   $("pHp").textContent=S.php; $("pMax").textContent=pm;
@@ -597,6 +601,34 @@ const SFX = {
   buy(){ tone(700,0.07,"sine",0.07); setTimeout(()=>tone(1000,0.1,"sine",0.07),70); },
   boss(){ tone(80,0.5,"sawtooth",0.1,-30); setTimeout(()=>tone(120,0.4,"sawtooth",0.09),150); }
 };
+// ---------- online accounts + world board (graceful offline fallback) ----------
+let ME = null;
+let acctDraft = {u:"", p:"", err:""};
+function tokenGet(){ try{ return localStorage.getItem("spearToken"); }catch(e){ return null; } }
+function tokenSet(t){ try{ if(t) localStorage.setItem("spearToken",t); else localStorage.removeItem("spearToken"); }catch(e){} }
+async function apiReq(path, body){
+  const t = tokenGet();
+  const r = await fetch(path, {method: body?"POST":"GET",
+    headers: Object.assign({"Content-Type":"application/json"}, t?{"Authorization":"Bearer "+t}:{}),
+    body: body?JSON.stringify(body):undefined});
+  if(!r.ok) throw new Error("http "+r.status);
+  return r.json();
+}
+async function accRefresh(){
+  const t = tokenGet(); if(!t) { ME=null; return null; }
+  try{ const r = await apiReq("/api/me"); if(r.ok){ ME=r.me; render(); return ME; } }catch(e){}
+  ME=null; tokenSet(null); render(); return null;
+}
+async function loadWorldBoard(){
+  try{ const rows = await apiReq("/api/scores"); return Array.isArray(rows)?rows:null; }
+  catch(e){ return null; }
+}
+function worldRows(rows){
+  return (rows||[]).slice(0,8).map((r,i)=>{
+    const mine = ME && ME.user && String(r.name||"").toLowerCase()===String(ME.user).toLowerCase();
+    return `<div class="row"><div>${["🥇","🥈","🥉"][i]||"🏅"} <b>${r.name||"???"}</b>${mine?" (YOU)":""} <small>Lv ${r.lvl||"?"} · ${r.kills||0} kills · ${r.bosses||0} bosses · score ${r.score||0}</small></div></div>`;
+  }).join("") || `<div class="stat">No legends yet — be the first!</div>`;
+}
 // tribal background loop (no audio files — all synthesized)
 let musicStarted=false, mStep=0;
 const STEP_DUR=60/132/2;
@@ -676,6 +708,7 @@ function victory(){
   SFX.win();
   S.meat+=E.meat; S.mat+=E.mat; S.skins+=E.skins; S.kills++;
   const wasBoss = E.boss;
+  if(wasBoss) S.bosses=(S.bosses||0)+1;
   const oldRank = rankIdx(S.level);
   S.level++; noteBest();
   const newRank = rankIdx(S.level);
@@ -715,6 +748,8 @@ function gameOver(){
   }
   setCrowd("sad");
   SFX.death();
+  if(tokenGet()){ const body={lvl:S.level, kills:S.kills, bosses:S.bosses||0, score:S.level*100+S.kills};
+    apiReq("/api/hunt_end", body).then(r=>{ if(r&&r.ok){ if(r.me) ME=r.me; log("🌐 Posted to the WORLD board!"); render(); } }).catch(()=>{}); }
   const btn = $("btnAttack");
   btn.textContent = "☠️ YOU DIED — click ↻ New Game above to reincarnate";
   btn.disabled = true;
@@ -898,7 +933,13 @@ function drawPanel(){
       r.appendChild(b); P.appendChild(r);
     });
   } else if(tab==="fame"){
-    P.innerHTML="<b>🏆 Hall of Fame — the greatest hunters on this device:</b>";
+    P.innerHTML="<b>🌐 WORLD — all hunters, everywhere:</b><div id='globBoard'><div class='stat'>Loading…</div></div>";
+    loadWorldBoard().then(rows=>{
+      if(tab!=="fame") return;
+      const g=$("globBoard"); if(!g) return;
+      g.innerHTML = rows? worldRows(rows) : `<div class="stat">🌐 World board unreachable (offline?) — local legends below.</div>`;
+    });
+    P.innerHTML+="<b>🏠 Hall of Fame — the greatest hunters on this device:</b>";
     const arr=Object.entries(STORE.profiles).map(([id,p])=>({id,...p})).sort((a,b)=>(b.level||0)-(a.level||0)||(b.kills||0)-(a.kills||0));
     const medals=["🥇","🥈","🥉"];
     arr.forEach((p,i)=>{
@@ -907,6 +948,34 @@ function drawPanel(){
       r.innerHTML=`<div>${medals[i]||"🏅"} <b>${p.name||"Caveman"}</b>${p.id===STORE.activeId?" (YOU)":""} <small>Lv ${p.level||1} · ${p.kills||0} kills · ${w.name} · best Lv ${(p.best&&p.best.level)||p.level||1}</small></div>`;
       P.appendChild(r);
     });
+  } else if(tab==="account"){
+    if(ME&&ME.user){
+      P.innerHTML=`<b>👤 Logged in as ${ME.user}</b>
+      <div class="stat">Best run: <b>Lv ${ME.best||0}</b> · ${ME.runs||0} runs posted</div>
+      <div class="row"><div>Your runs post to the WORLD board when you die. Dying finally pays!</div><button class="btn ghost" id="btnLogout">Log out</button></div>`;
+      $("btnLogout").onclick=()=>{ tokenSet(null); ME=null; acctDraft={u:"",p:"",err:""}; log("👋 Logged out (local hunters stay)."); render(); drawPanel(); };
+    } else {
+      P.innerHTML=`<b>👤 Hunter account — post your runs to the WORLD board:</b>
+      <div class="row"><div><b>Name</b> <small>3-16 letters/digits/_</small><br><input id="acctUser" maxlength="16" style="font:inherit;padding:6px;border:2px solid #1c1917;border-radius:8px;width:150px" value=""></div>
+      <div><b>Password</b> <small>4+ chars</small><br><input id="acctPass" type="password" maxlength="72" style="font:inherit;padding:6px;border:2px solid #1c1917;border-radius:8px;width:150px" value=""></div>
+      <div><br><button class="btn craft" id="btnReg">Register</button> <button class="btn tame" id="btnLogin">Log in</button></div></div>
+      <div class="stat" id="acctErr"></div>`;
+      $("acctUser").value=acctDraft.u; $("acctPass").value=acctDraft.p;
+      $("acctUser").oninput=e=>{acctDraft.u=e.target.value;};
+      $("acctPass").oninput=e=>{acctDraft.p=e.target.value;};
+      if(acctDraft.err) $("acctErr").textContent=acctDraft.err;
+      const go=async which=>{
+        acctDraft.err="";
+        const user=$("acctUser").value.trim(), pass=$("acctPass").value;
+        try{
+          const r=await apiReq(which==="/api/register"?"/api/register":"/api/login",{user,pass});
+          if(r.ok){ tokenSet(r.token); ME=r.me; acctDraft={u:"",p:"",err:""}; log(`👋 Welcome, <b>${r.me.user}</b>! Your runs now post worldwide.`); render(); drawPanel(); }
+          else { acctDraft.err=r.err||"nope"; drawPanel(); }
+        }catch(e){ acctDraft.err="server unreachable (offline?)"; drawPanel(); }
+      };
+      $("btnReg").onclick=()=>go("/api/register");
+      $("btnLogin").onclick=()=>go("/api/login");
+    }
   } else {
     P.innerHTML=`<b>How to play</b>
     <div class="stat">1. Press <b>ATTACK</b> (or Spacebar, <b>E</b> eats meat). You hit, then it hits back. Pets help every round. 12% of your hits crit for ×1.6!</div>
@@ -917,7 +986,8 @@ function drawPanel(){
     <div class="stat">6. <b>Rank up</b> (Learning 10 → Hunter 25 → Tracker 50 → Beastfriend 75 → Apex 100 → Legend 200): each rank-up hardens your body (+25 max HP), fully heals you, showers gifts, and a wild baby beast joins your pack!</div>
     <div class="row"><div><b>Want the guided tour?</b><small>Caveman explains everything in 5 steps.</small></div><button class="btn craft" id="btnTutReplay">▶ Tutorial</button></div>
     <div class="stat">🎵 tribal drums play automatically. <b>M</b> or 🔊 mutes everything.</div>
-    <div class="stat">👥 <b>Profiles:</b> several hunters can share this device — switch, add or delete them in your panel. The <b>🏆 Hall of Fame</b> tab ranks them all!</div>`;
+    <div class="stat">👥 <b>Profiles:</b> several hunters can share this device — switch, add or delete them in your panel. The <b>🏆 Hall of Fame</b> tab ranks them all!</div>
+    <div class="stat">👤 <b>Account tab:</b> register a hunter name + password to post your runs to the <b>🌐 WORLD board</b> every time you die. (Posting needs internet — hunting always works offline.)</div>`;
   }
   const rb=$("btnTutReplay"); if(rb) rb.onclick=()=>showTutorial();
 }
@@ -929,6 +999,7 @@ log("🌅 You are a dumb caveman with a <b>stick</b> and <b>rags</b>. Go bonk a 
 spawn(); drawPanel(); render();
 if(!S.tutorial){ if(S.kills===0 && S.level===1) setTimeout(showTutorial, 700); else { S.tutorial=1; save(); } }
 setInterval(()=>{ const el=$("infoTime"); if(el&&S&&S.runStart) el.textContent=fmtTime(Date.now()-S.runStart); },1000);
+accRefresh();
 })();
 </script>
 </body>
