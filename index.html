@@ -971,7 +971,7 @@ function drawPanel(){
           const r=await apiReq(which==="/api/register"?"/api/register":"/api/login",{user,pass});
           if(r.ok){ tokenSet(r.token); ME=r.me; acctDraft={u:"",p:"",err:""}; log(`👋 Welcome, <b>${r.me.user}</b>! Your runs now post worldwide.`); render(); drawPanel(); }
           else { acctDraft.err=r.err||"nope"; drawPanel(); }
-        }catch(e){ acctDraft.err="server unreachable (offline?)"; drawPanel(); }
+        }catch(e){ const m=String((e&&e.message)||""); acctDraft.err=(m && !/^(http \d+|Failed to fetch|Load failed|NetworkError)/.test(m))?m:"server unreachable (offline?)"; drawPanel(); }
       };
       $("btnReg").onclick=()=>go("/api/register");
       $("btnLogin").onclick=()=>go("/api/login");
