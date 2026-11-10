@@ -49,6 +49,8 @@
   .btn { border:3px solid #1c1917; border-radius:14px; padding:10px 14px; font:inherit; font-weight:700; cursor:pointer; margin:4px 4px 4px 0; box-shadow:0 4px 0 #1c1917; transition:transform .05s; }
   .btn:active:not(:disabled){ transform:translateY(4px); box-shadow:none; }
   .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .profbtn { font-size:.72rem; padding:4px 8px; margin:2px 4px 2px 0; }
+  .profbtn.on { background:#fde68a; }
   button:focus-visible, .tab:focus-visible { outline:3px solid #0ea5e9; outline-offset:2px; }
   .attack { background:#ef4444; color:#fff; font-size:1.4rem; width:100%; text-shadow:2px 2px 0 #1c1917; }
   .attack:hover:not(:disabled){ background:#f87171; }
@@ -159,7 +161,8 @@
 
   <div class="layout">
     <div class="card" id="playerCard">
-      <h2>🧔 YOU — Caveman <span id="pTitle">(Dumb)</span></h2>
+      <h2>🧔 <span id="pName">YOU</span> — Caveman <span id="pTitle">(Dumb)</span></h2>
+    <div id="profileRow" style="margin:2px 0 6px;"></div>
     <div class="hpbar"><div class="hpfill php" id="pHpFill" style="width:100%"></div></div>
       <div class="stat">❤️ HP: <b><span id="pHp">–</span>/<span id="pMax">–</span></b></div>
       <div class="stat">🗡️ Weapon: <b id="pWeapon">Stick</b> (<span id="pAtk">6</span> atk)</div>
@@ -254,6 +257,7 @@
     <button class="tab active" data-tab="weapon">🗡️ Upgrade Spear</button>
     <button class="tab" data-tab="cloth">🥋 Sew Clothing</button>
     <button class="tab" data-tab="tame">🐾 Tame / Feed Babies</button>
+    <button class="tab" data-tab="fame">🏆 Hall of Fame</button>
     <button class="tab" data-tab="help">❓ How to play</button>
   </div>
   <div class="panel" id="panel"></div>
@@ -360,11 +364,29 @@ const RANK_REWARD = {10:"Baby Fox",25:"Baby Dire Wolf",50:"Baby Lynx",75:"Baby S
 function rankIdx(l){ let r=0; for(const [t] of TITLES) if(l>=t) r++; return r-1; }
 
 // ---------- STATE ----------
+let STORE;
+function fresh(name, skipTut){ return { name:name||"Caveman", level:1, meat:3, mat:0, skins:0, weapon:0, cloth:0, php:500, pets:[], kills:0, dead:false, tutorial:skipTut?1:0, runStart:Date.now(), vigor:0, best:{level:1,kills:0} }; }
+function loadAll(){
+  try{
+    const P = JSON.parse(localStorage.getItem("spearProfiles"));
+    if(P && P.profiles && P.activeId && P.profiles[P.activeId]) return P;
+  }catch(e){}
+  let s=null; try{ s = JSON.parse(localStorage.getItem("spearUpgradeSave")); }catch(e){}
+  if(s && s.level && !s.dead){
+    s.name = s.name||"Caveman"; s.runStart = s.runStart||Date.now(); s.tutorial = 1; s.vigor = s.vigor||0;
+    let ob={level:0,kills:0}; try{ const b=JSON.parse(localStorage.getItem("spearBest")); if(b&&b.level)ob=b; }catch(e){}
+    s.best = (ob.level>(s.level||0)) ? ob : {level:s.level||1, kills:s.kills||0};
+    return {activeId:"hunter1", profiles:{hunter1:s}};
+  }
+  return {activeId:"hunter1", profiles:{hunter1:fresh("Caveman")}};
+}
 let S;
-function fresh(){ return { level:1, meat:3, mat:0, skins:0, weapon:0, cloth:0, php:500, pets:[], kills:0, dead:false, tutorial:0, runStart:Date.now() }; }
-function load(){ try{ const s = JSON.parse(localStorage.getItem("spearUpgradeSave")); if(s && s.level && !s.dead) return s; }catch(e){} return fresh(); }
-S = load();
+STORE = loadAll();
+S = STORE.profiles[STORE.activeId];
 if(!S.runStart){ S.runStart = Date.now(); }
+if(!S.best){ S.best = {level:S.level||1, kills:S.kills||0}; }
+if(!S.name){ S.name = "Caveman"; }
+if(S.vigor==null){ S.vigor = 0; }
 let E = null; // current enemy {hp,max,atk,name,emoji,fam,boss,meat,mat,skins}
 
 function island(){ return Math.floor((S.level-1)/25)+1; }
@@ -461,6 +483,17 @@ function render(){
   $("pWeapon").textContent=WEAPONS[S.weapon].name; $("pAtk").textContent=playerAtk();
   $("pCloth").textContent=CLOTHES[S.cloth].name; $("pDef").textContent=playerDef();
   $("pTitle").textContent=title();
+  $("pName").textContent=S.name||"Caveman";
+  { const pr=$("profileRow"); pr.innerHTML="";
+    Object.entries(STORE.profiles).forEach(([id,p])=>{
+      const b=document.createElement("button");
+      b.className="btn ghost profbtn"+(id===STORE.activeId?" on":"");
+      b.textContent=(p.name||"Caveman")+" Lv"+(p.level||1); b.title="Switch hunter";
+      b.onclick=()=>switchProfile(id); pr.appendChild(b);
+      if(id!==STORE.activeId){ const x=document.createElement("button"); x.className="btn ghost profbtn"; x.textContent="✖"; x.title="Delete "+(p.name||"hunter"); x.onclick=(ev)=>{ev.stopPropagation();deleteProfile(id);}; pr.appendChild(x); }
+    });
+    const add=document.createElement("button"); add.className="btn craft profbtn"; add.textContent="＋ New"; add.title="New hunter"; add.onclick=()=>newProfile(); pr.appendChild(add);
+  }
   $("pPets").textContent = S.pets.length? S.pets.map(p=>p.emoji+" Lv"+p.lvl).join(" ") : "none";
   { const pk=$("pack"); pk.innerHTML="";
     S.pets.forEach((p,i)=>{ const s=document.createElement("span"); s.className="pet"; s.title=petName(p); s.style.animationDelay=(i*0.13)+"s"; const sp=p.species||p.name.replace(/^Baby /,"").replace(/^Puppy$/,"Dog"); const pw=({Baby:54,Young:72,Teen:92,Adult:116}[stageFor(p.lvl)]||54); s.innerHTML=`${petSVG(sp,pw)}<small>Lv${p.lvl}</small>`; pk.appendChild(s); }); }
@@ -483,7 +516,7 @@ function render(){
     $("infoHit").textContent = "~"+(playerAtk()+1+petDmg())+" per hit (12% crit ×1.6)";
     $("infoKills").textContent = S.kills;
     $("infoTime").textContent = fmtTime(Date.now()-(S.runStart||Date.now()));
-    $("infoBest").textContent = BEST.level? ("Lv "+BEST.level+" · "+BEST.kills+" kills") : "—";
+    $("infoBest").textContent = (S.best&&S.best.level)? ("Lv "+S.best.level+" · "+S.best.kills+" kills") : "—";
     { const _m = S.level % 25;
       $("infoBoss").textContent = _m===0 ? "👑 NOW — good luck!" : `in ${25-_m} (Lv ${S.level+(25-_m)})`; }
     $("disguiseMsg").textContent = disguised()? "🥸 Disguise works! Looks like "+E.fam+" — takes 30% less damage." : "";
@@ -501,10 +534,39 @@ function render(){
   save();
   drawPanel(); // keep shop buttons/prices in sync after every kill, meal, or feed
 }
-let BEST={level:0,kills:0}; try{ const _b=JSON.parse(localStorage.getItem("spearBest")); if(_b&&_b.level)BEST=_b; }catch(e){}
 function fmtTime(ms){ const s=Math.floor(ms/1000), h=Math.floor(s/3600), m=Math.floor(s%3600/60), ss=s%60; return (h>0?h+":"+String(m).padStart(2,"0")+":":"")+String(m).padStart(h>0?2:1,"0")+":"+String(ss).padStart(2,"0"); }
-function noteBest(){ if(S.level>BEST.level||(S.level===BEST.level&&S.kills>BEST.kills)){ BEST={level:S.level,kills:S.kills}; try{localStorage.setItem("spearBest",JSON.stringify(BEST));}catch(e){} } }
-function save(){ localStorage.setItem("spearUpgradeSave", JSON.stringify(S)); }
+function noteBest(){ const B=S.best||(S.best={level:0,kills:0}); if(S.level>B.level||(S.level===B.level&&S.kills>B.kills)){ S.best={level:S.level,kills:S.kills}; save(); } }
+function save(){ STORE.profiles[STORE.activeId]=S; try{localStorage.setItem("spearProfiles",JSON.stringify(STORE));}catch(e){} }
+function switchProfile(id){
+  if(!STORE.profiles[id]||id===STORE.activeId) return;
+  save(); STORE.activeId=id; S=STORE.profiles[id];
+  if(S.dead){ S=fresh(S.name||"Caveman",true); STORE.profiles[id]=S; }
+  if(S.php<=0) S.php=playerMaxHp();
+  $("btnAttack").disabled=false; $("btnAttack").textContent="🗡️ ATTACK!";
+  log(`👋 Now playing as <b>${S.name||"Caveman"}</b>!`);
+  spawn(); render();
+}
+function newProfile(){
+  const ids=Object.keys(STORE.profiles);
+  let n=null; try{ n=prompt("Name your new hunter:","Caveman "+(ids.length+1)); }catch(e){}
+  if(n===null) return;
+  n=(n||"").trim().slice(0,12)||("Caveman "+(ids.length+1));
+  const id="h"+Date.now();
+  STORE.profiles[id]=fresh(n,true); STORE.activeId=id; S=STORE.profiles[id];
+  $("btnAttack").disabled=false; $("btnAttack").textContent="🗡️ ATTACK!";
+  log(`🌅 <b>${n}</b> picks up a stick...`);
+  spawn(); render();
+}
+function deleteProfile(id){
+  const ids=Object.keys(STORE.profiles);
+  if(ids.length<=1){ log("You need at least one hunter!"); return; }
+  const p=STORE.profiles[id]; if(!p) return;
+  if(!confirm("Delete "+(p.name||"hunter")+" (Lv "+(p.level||1)+") forever?"))return;
+  delete STORE.profiles[id];
+  if(STORE.activeId===id){ STORE.activeId=Object.keys(STORE.profiles)[0]; S=STORE.profiles[STORE.activeId]; spawn(); }
+  log(`🪦 <b>${p.name||"Hunter"}</b> is gone.`);
+  save(); render();
+}
 
 // ---------- COMBAT ----------
 let AC=null, soundOn=true;
@@ -660,7 +722,7 @@ function gameOver(){
   setTimeout(()=>{ S.pets=[]; save(); render(); }, 700);
 }
 $("btnEat").onclick=()=>{ if(!alive())return; if(S.meat<1){log("No meat! Kill something first.");return;} const hm=Math.round(playerMaxHp()*0.25); if(S.php>=playerMaxHp()){log("Already full HP.");return;} S.meat--; S.php=Math.min(playerMaxHp(),S.php+hm); dmgFloat($("pSprite"), "YUM! +"+hm, "#16a34a"); SFX.eat(); bigEvent("🍖 +"+hm+" HP!"); log("🍖 Yum! +"+hm+" HP."); render(); };
-$("btnNew").onclick=()=>{ if(!confirm("Start over as a brand-new dumb caveman? Your hunter, pack, spear and furs will be gone FOREVER!"))return; $("pSprite").classList.remove("dead"); const pk0=$("pack"); if(pk0) pk0.classList.remove("flee"); S=fresh(); $("btnAttack").disabled=false; $("btnAttack").textContent="🗡️ ATTACK!"; log("🌅 A new dumb caveman (500 HP) wakes up with a stick..."); localStorage.removeItem("spearUpgradeSave"); spawn(); render(); };
+$("btnNew").onclick=()=>{ if(!confirm("Start over as a brand-new dumb caveman? "+(S.name||"Your hunter")+", your pack, spear and furs will be gone FOREVER!"))return; $("pSprite").classList.remove("dead"); const pk0=$("pack"); if(pk0) pk0.classList.remove("flee"); S=fresh(S.name||"Caveman",true); STORE.profiles[STORE.activeId]=S; $("btnAttack").disabled=false; $("btnAttack").textContent="🗡️ ATTACK!"; log("🌅 A new dumb caveman (500 HP) wakes up with a stick..."); save(); spawn(); render(); };
 $("btnSound").onclick=()=>{ soundOn=!soundOn; $("btnSound").textContent=soundOn?"🔊":"🔇"; try{localStorage.setItem("spearSound",soundOn?"on":"off");}catch(e){} if(soundOn) SFX.test(); };
 
 const TUT = [
@@ -835,6 +897,16 @@ function drawPanel(){
       b.onclick=()=>{ if(!alive())return; if(S.meat>=t.cost){S.meat-=t.cost;SFX.buy();S.pets.push({name:t.name,emoji:t.emoji,atk:t.baseAtk,base:t.baseAtk,species:t.name.replace(/^Baby /,"").replace(/^Puppy$/,"Dog"),lvl:1});log(`🐾 A wild <b>${t.name}</b> joins you! It will fight by your side.`);render();drawPanel();} };
       r.appendChild(b); P.appendChild(r);
     });
+  } else if(tab==="fame"){
+    P.innerHTML="<b>🏆 Hall of Fame — the greatest hunters on this device:</b>";
+    const arr=Object.entries(STORE.profiles).map(([id,p])=>({id,...p})).sort((a,b)=>(b.level||0)-(a.level||0)||(b.kills||0)-(a.kills||0));
+    const medals=["🥇","🥈","🥉"];
+    arr.forEach((p,i)=>{
+      const r=document.createElement("div"); r.className="row";
+      const w=WEAPONS[p.weapon]||WEAPONS[0];
+      r.innerHTML=`<div>${medals[i]||"🏅"} <b>${p.name||"Caveman"}</b>${p.id===STORE.activeId?" (YOU)":""} <small>Lv ${p.level||1} · ${p.kills||0} kills · ${w.name} · best Lv ${(p.best&&p.best.level)||p.level||1}</small></div>`;
+      P.appendChild(r);
+    });
   } else {
     P.innerHTML=`<b>How to play</b>
     <div class="stat">1. Press <b>ATTACK</b> (or Spacebar, <b>E</b> eats meat). You hit, then it hits back. Pets help every round. 12% of your hits crit for ×1.6!</div>
@@ -844,7 +916,8 @@ function drawPanel(){
     <div class="stat">5. <b>Permadeath:</b> if you die, you die. New caveman starts over from level 1. You have <b>500 HP</b> — eat meat mid-fight to survive bosses!</div>
     <div class="stat">6. <b>Rank up</b> (Learning 10 → Hunter 25 → Tracker 50 → Beastfriend 75 → Apex 100 → Legend 200): each rank-up hardens your body (+25 max HP), fully heals you, showers gifts, and a wild baby beast joins your pack!</div>
     <div class="row"><div><b>Want the guided tour?</b><small>Caveman explains everything in 5 steps.</small></div><button class="btn craft" id="btnTutReplay">▶ Tutorial</button></div>
-    <div class="stat">🎵 tribal drums play automatically. <b>M</b> or 🔊 mutes everything.</div>`;
+    <div class="stat">🎵 tribal drums play automatically. <b>M</b> or 🔊 mutes everything.</div>
+    <div class="stat">👥 <b>Profiles:</b> several hunters can share this device — switch, add or delete them in your panel. The <b>🏆 Hall of Fame</b> tab ranks them all!</div>`;
   }
   const rb=$("btnTutReplay"); if(rb) rb.onclick=()=>showTutorial();
 }
