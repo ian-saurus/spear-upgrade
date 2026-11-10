@@ -60,21 +60,25 @@ def _req(method, url, body=None, extra=None):
 
 
 def _blob_url(name):
+    """Returns (found, url). found=False with url None means the list API
+    worked but the blob simply does not exist yet (use the default)."""
     if name in _url_cache:
-        return _url_cache[name]
+        return True, _url_cache[name]
     import urllib.parse
+    listed_ok = False
     for _ in range(4):
         q = urllib.parse.urlencode({"prefix": PREFIX + name, "limit": 10})
         try:
             data = json.loads(_req("GET", BASE + "/?" + q))
+            listed_ok = True
         except Exception:
             data = {}
         for b in data.get("blobs", []):
             if b.get("pathname") == PREFIX + name:
                 _url_cache[name] = b.get("downloadUrl") or b.get("url")
-                return _url_cache[name]
+                return True, _url_cache[name]
         time.sleep(0.4)
-    return None
+    return listed_ok, None
 
 
 def _local(name):
@@ -97,10 +101,14 @@ def load_json(name, default, fresh=False, strict=False):
         try:
             if fresh:
                 _url_cache.pop(name, None)
-            url = _blob_url(name)
+            found, url = _blob_url(name)
             if url:
                 sep = "&" if "?" in url else "?"
                 val = json.loads(_req("GET", f"{url}{sep}cb={int(time.time() * 1000)}"))
+                _cache[name] = (time.time(), val)
+                return val
+            if found:
+                val = default
                 _cache[name] = (time.time(), val)
                 return val
             failed = True
