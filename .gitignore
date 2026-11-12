@@ -1,6 +1,5 @@
 .vercel
-data/*.json
-data/*.tmp
+data/
 __pycache__/
 *.pyc
 .env*

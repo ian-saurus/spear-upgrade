@@ -1,8 +1,10 @@
 """Shared backend logic for Spear Upgrade serverless functions.
 
-Storage: Vercel Blob (BLOB_READ_WRITE_TOKEN) with an instance-memory cache.
-Local fallback: ./data/*.json (used when env var is absent, or when
-SPEAR_TEST_STORE / SPEAR_TEST_DIR is set).
+Storage: Upstash Redis (shared underrealm-redis store, KV_REST_API_URL +
+KV_REST_API_TOKEN injected by the Vercel storage connection).
+Keys reuse the blob pathnames (spearupgrade/*.json).
+Local fallback: ./data/*.json — used when the Redis vars are absent, and by
+tests via SPEAR_TEST_STORE / SPEAR_TEST_DIR. No Blob anywhere.
 """
 import base64
 import hashlib
@@ -25,17 +27,20 @@ def _from_tests():
     return os.path.basename(os.path.dirname(entry)) == "tests"
 
 
-TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN", "")
+RURL = (os.environ.get("UPSTASH_REDIS_REST_URL", "")
+        or os.environ.get("KV_REST_API_URL", "")).rstrip("/")
+RTOK = (os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
+        or os.environ.get("KV_REST_API_TOKEN", ""))
 if _from_tests() and not os.environ.get("SPEAR_LIVE_STORE"):
-    TOKEN = ""
-BASE = "https://vercel.com/api/blob"
+    RURL = ""
+    RTOK = ""
+
 PREFIX = "spearupgrade/"
 DATA_DIR = os.environ.get("SPEAR_TEST_DIR") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
 SESSION_PREFIX = "sp1"
 
 _cache = {}
-_url_cache = {}
 CACHE_TTL = 20
 
 
@@ -46,39 +51,23 @@ class StoreBusy(Exception):
 TOKEN_DAYS = 30
 
 
-def _req(method, url, body=None, extra=None):
-    import uuid
-    headers = {"Authorization": "Bearer " + TOKEN,
-               "Content-Type": "application/json",
-               "x-api-version": "13",
-               "x-api-blob-request-id": f"{int(time.time())}:{uuid.uuid4().hex[:8]}",
-               "x-api-blob-request-attempt": "0"}
-    headers.update(extra or {})
-    req = urllib.request.Request(url, data=body, method=method, headers=headers)
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        return resp.read()
+def _rreq(command, *args, body=None):
+    """One Upstash Redis REST call. Returns the parsed `result`, raises on error.
 
-
-def _blob_url(name):
-    """Returns (found, url). found=False with url None means the list API
-    worked but the blob simply does not exist yet (use the default)."""
-    if name in _url_cache:
-        return True, _url_cache[name]
+    Reads are plain GETs (`GET /get/<key>`); writes POST the value as the body
+    (`POST /set/<key>`), so JSON payloads never travel in the URL.
+    """
     import urllib.parse
-    listed_ok = False
-    for _ in range(4):
-        q = urllib.parse.urlencode({"prefix": PREFIX + name, "limit": 10})
-        try:
-            data = json.loads(_req("GET", BASE + "/?" + q))
-            listed_ok = True
-        except Exception:
-            data = {}
-        for b in data.get("blobs", []):
-            if b.get("pathname") == PREFIX + name:
-                _url_cache[name] = b.get("downloadUrl") or b.get("url")
-                return True, _url_cache[name]
-        time.sleep(0.4)
-    return listed_ok, None
+    parts = "/".join([command] + [urllib.parse.quote(str(a), safe="") for a in args])
+    data = body.encode() if isinstance(body, str) else body
+    req = urllib.request.Request(RURL + "/" + parts, data=data,
+                                 method="POST" if data is not None else "GET",
+                                 headers={"Authorization": "Bearer " + RTOK})
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        payload = json.loads(resp.read())
+    if isinstance(payload, dict) and "error" in payload:
+        raise IOError(payload["error"])
+    return payload.get("result")
 
 
 def _local(name):
@@ -96,26 +85,22 @@ def load_json(name, default, fresh=False, strict=False):
     hit = _cache.get(name)
     if not fresh and hit and time.time() - hit[0] < CACHE_TTL:
         return hit[1]
-    if TOKEN:
+    if RURL and RTOK:
+        # A missing key reads as null: serve the default. Only a failed
+        # call itself counts as an outage.
         failed = False
         try:
-            if fresh:
-                _url_cache.pop(name, None)
-            found, url = _blob_url(name)
-            if url:
-                sep = "&" if "?" in url else "?"
-                val = json.loads(_req("GET", f"{url}{sep}cb={int(time.time() * 1000)}"))
-                _cache[name] = (time.time(), val)
-                return val
-            if found:
+            got = _rreq("GET", PREFIX + name)
+            if got is None:
                 val = default
-                _cache[name] = (time.time(), val)
-                return val
-            failed = True
+            else:
+                val = json.loads(got)
+            _cache[name] = (time.time(), val)
+            return val
         except Exception:
             failed = True
         if hit:
-            return hit[1]
+            return hit[1]  # hiccup: serve stale rather than empty
         if strict and failed:
             raise StoreBusy(name)
         return default
@@ -135,23 +120,14 @@ def load_json(name, default, fresh=False, strict=False):
 
 def save_json(name, obj):
     body = json.dumps(obj).encode()
-    if TOKEN:
+    if RURL and RTOK:
         ok = False
         try:
-            import urllib.parse
-            q = urllib.parse.urlencode({"pathname": PREFIX + name})
-            resp = json.loads(_req("PUT", BASE + "/?" + q, body, {
-                "x-vercel-blob-access": "private",
-                "x-add-random-suffix": "0",
-                "x-allow-overwrite": "1",
-                "x-content-type": "application/json"}))
-            if resp.get("downloadUrl") or resp.get("url"):
-                _url_cache[name] = resp.get("downloadUrl") or resp.get("url")
-                ok = True
+            ok = _rreq("SET", PREFIX + name, body=body) == "OK"
         except Exception:
             ok = False
         if ok:
-            _cache[name] = (time.time(), obj)
+            _cache[name] = (time.time(), obj)  # only cache what is actually stored
         return ok
     try:
         os.makedirs(DATA_DIR, exist_ok=True)
@@ -194,8 +170,6 @@ def _session_key():
     global _skey
     if _skey is None:
         raw = SESSION_SECRET
-        if not raw and TOKEN:
-            raw = TOKEN + "|spearupgrade.session.v1"
         if not raw:
             raw = _key_file()
         _skey = hashlib.sha256(raw.encode("utf-8")).digest()
@@ -256,7 +230,7 @@ def read_session(token):
         if not hmac.compare_digest(sig, want):
             return None
         p = json.loads(_b64d(body))
-        if int(p.get("e") or 0) < time.time():
+        if int(p.get("e", 0)) < time.time():
             return None
         user = str(p.get("u") or "")
         if not user:
