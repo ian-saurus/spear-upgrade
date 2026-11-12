@@ -23,16 +23,16 @@ Manual deploy if needed:
 
 ## Online accounts + world leaderboard
 
-Same pattern as `neon-survivor`: Python serverless functions in `api/`
-(`register`, `login`, `me`, `scores`, `hunt_end`) backed by a shared Vercel
-Blob store (`spearupgrade/` prefix), with a local `./data/*.json` fallback.
+Same pattern as `neon-survivor` / `underrealm`: Python serverless functions in
+`api/` (`register`, `login`, `me`, `scores`, `hunt_end`) backed by the shared
+`underrealm-redis` Upstash store (keys under `spearupgrade/`), with a local
+`./data/*.json` fallback for offline dev and tests.
 
-- Needs `BLOB_READ_WRITE_TOKEN` in the Vercel project (production + preview).
-- Run `./tests/run.sh` before pushing: API compile, store units,
-  full HTTP round-trip against a temp local store, and a game JS syntax check.
-- Note: if the shared Blob store is suspended, writes return
-  `503 {"ok": false, "err": "storage busy — retry"}` and the game keeps
-  working locally (local profiles + local Hall of Fame are unaffected).
+- Needs the store connected (`vercel storage connect underrealm-redis`)
+  plus a `SESSION_SECRET` env var (production + preview).
+- Run `./tests/run.sh` before pushing: API compile, store units, Upstash
+  protocol mapping tests, full HTTP roundtrip on a temp local store, and a
+  game JS syntax check.
 
 ## Controls
 
