@@ -959,9 +959,10 @@ function drawPanel(){
       P.innerHTML=`<b>👤 Logged in as ${ME.user}${ME.premium?" 👑":""}</b>${ME.premium?`<div class="stat">👑 <b>Premium active!</b> Golden Godskin unlocked — check the clothing shop!</div>`:`<div class="stat">Log in on <b>XtremeGaming</b> to link accounts — premium unlocks the 👑 Golden Godskin automatically.</div>`}
       <div class="stat">Best run: <b>Lv ${ME.best||0}</b> · ${ME.runs||0} runs posted</div>
       <div class="row"><div>Your runs post to the WORLD board when you die. Dying finally pays!</div><button class="btn ghost" id="btnLogout">Log out</button></div>`;
-      $("btnLogout").onclick=()=>{ tokenSet(null); ME=null; acctDraft={u:"",p:"",err:""}; log("👋 Logged out (local hunters stay)."); render(); drawPanel(); };
+      $("btnLogout").onclick=()=>{ tokenSet(null); hubTokenSet(null); try{sessionStorage.setItem("spearNoAuto","1");}catch(e){} ME=null; acctDraft={u:"",p:"",err:""}; log("👋 Logged out (local hunters stay)."); render(); drawPanel(); };
     } else {
       P.innerHTML=`<b>👤 Hunter account — post your runs to the WORLD board:</b>
+      <div class="stat">🎮 <b>Logged in on XtremeGaming?</b> You're logged in here automatically — no extra click needed (just open the game from the hub's Play button, or wait a moment on direct visits).</div>
       <div class="row"><div><b>Name</b> <small>3-16 letters/digits/_</small><br><input id="acctUser" maxlength="16" style="font:inherit;padding:6px;border:2px solid #1c1917;border-radius:8px;width:150px" value=""></div>
       <div><b>Password</b> <small>4+ chars</small><br><input id="acctPass" type="password" maxlength="72" style="font:inherit;padding:6px;border:2px solid #1c1917;border-radius:8px;width:150px" value=""></div>
       <div><br><button class="btn craft" id="btnReg">Register</button> <button class="btn tame" id="btnLogin">Log in</button></div></div>
@@ -982,7 +983,7 @@ function drawPanel(){
       };
       $("btnReg").onclick=()=>go("/api/register");
       $("btnLogin").onclick=()=>go("/api/login");
-      $("btnHub").onclick=()=>{ location.href=HUB+"/account/?next="+encodeURIComponent(location.href.split("?")[0]); };
+      $("btnHub").onclick=()=>{ try{sessionStorage.removeItem("spearNoAuto");}catch(e){} location.href=HUB+"/account/?next="+encodeURIComponent(location.href.split("?")[0]); };
     }
   } else {
     P.innerHTML=`<b>How to play</b>
@@ -996,7 +997,7 @@ function drawPanel(){
     <div class="stat">🎵 tribal drums play automatically. <b>M</b> or 🔊 mutes everything.</div>
     <div class="stat">👥 <b>Profiles:</b> several hunters can share this device — switch, add or delete them in your panel. The <b>🏆 Hall of Fame</b> tab ranks them all!</div>
     <div class="stat">👤 <b>Account tab:</b> register a hunter name + password to post your runs to the <b>🌐 WORLD board</b> every time you die. (Posting needs internet — hunting always works offline.)</div>
-    <div class="stat">🎮 <b>XtremeGaming login:</b> log in once on the hub and you're logged in here too — premium unlocks the 👑 Golden Godskin automatically, no codes!</div>`;
+    <div class="stat">🎮 <b>XtremeGaming login:</b> log in once on the hub and you're logged in here automatically — premium makes the 👑 Golden Godskin FREE in the clothing shop (just press Wear, no codes)!</div>`;
   }
   const rb=$("btnTutReplay"); if(rb) rb.onclick=()=>showTutorial();
 }
@@ -1008,20 +1009,80 @@ log("🌅 You are a dumb caveman with a <b>stick</b> and <b>rags</b>. Go bonk a 
 spawn(); drawPanel(); render();
 if(!S.tutorial){ if(S.kills===0 && S.level===1) setTimeout(showTutorial, 700); else { S.tutorial=1; save(); } }
 setInterval(()=>{ const el=$("infoTime"); if(el&&S&&S.runStart) el.textContent=fmtTime(Date.now()-S.runStart); },1000);
-accRefresh();
 const HUB="https://xtremegaming.vercel.app";
+// One hub login logs you into every game: the hub hands this game a short
+// ?sso= token (Play links) or postMessages it to a hidden bridge iframe
+// (direct visits). Either way the token is verified SERVER-SIDE here
+// (/api/sso) before we mint a local session — never trusted client-side.
+// Premium from the hub unlocks the 👑 Golden Godskin with a FREE Wear
+// button: no codes, no redeem screens.
+function hubTokenGet(){ try{ return localStorage.getItem("spearHubToken"); }catch(e){ return null; } }
+function hubTokenSet(t){ try{ if(t) localStorage.setItem("spearHubToken",t); else localStorage.removeItem("spearHubToken"); }catch(e){} }
+async function ssoApplyHubToken(hubToken, silent){
+  const r=await apiReq("/api/sso",{token:hubToken});
+  if(r&&r.ok){ tokenSet(r.token); hubTokenSet(hubToken); ME=r.me; acctDraft={u:"",p:"",err:""};
+    log(`👋 Welcome, <b>${ME.user}</b>! Logged in with XtremeGaming${ME.premium?" 👑 Premium skins unlocked — the Golden Godskin is FREE in the clothing shop!":""}.`);
+    render(); if(typeof drawPanel==="function")try{drawPanel();}catch(e){} return true; }
+  if(!silent) log("XtremeGaming login didn't work — try again.");
+  return false;
+}
 async function ssoLogin(){
   let m=null;
   try{ m=/[?&]sso=([^&]+)/.exec(location.search); }catch(e){}
-  if(!m) return;
+  if(!m) return false;
   try{ const u=new URL(location.href); u.searchParams.delete("sso"); history.replaceState(null, "", u.pathname+u.search+u.hash); }catch(e){}
   try{
-    const r=await apiReq("/api/sso",{token:decodeURIComponent(m[1])});
-    if(r&&r.ok){ tokenSet(r.token); ME=r.me; acctDraft={u:"",p:"",err:""}; log(`👋 Welcome, <b>${ME.user}</b>! Logged in with XtremeGaming${ME.premium?" 👑 Premium skins unlocked!":""}.`); render(); if(typeof drawPanel==="function")try{drawPanel();}catch(e){} }
-    else { log("XtremeGaming login didn't work — try again."); }
-  }catch(e){ const m=String((e&&e.message)||""); log(m==="bad sso token"?"XtremeGaming login didn't work — try again.":/Failed to fetch|NetworkError|network|fetch/i.test(m)?"XtremeGaming login failed — hub unreachable?":"XtremeGaming login failed ("+m+")."); }
+    return await ssoApplyHubToken(decodeURIComponent(m[1]), false);
+  }catch(e){ const msg=String((e&&e.message)||""); log(msg==="bad sso token"?"XtremeGaming login didn't work — try again.":/Failed to fetch|NetworkError|network|fetch/i.test(msg)?"XtremeGaming login failed — hub unreachable?":"XtremeGaming login failed ("+msg+")."); return false; }
 }
-ssoLogin();
+// Silent auto-login for direct visits: ask the hub (via a hidden iframe on
+// the hub origin, which can read the hub's own localStorage) for its token.
+// Hub counterpart: serve /sso-bridge.html that postMessages
+// {type:"xtg-sso", token} to its parent. Missing bridge = stay guest.
+let _ssoBridgeDone=false;
+function ssoBridgeAuto(){
+  if(_ssoBridgeDone) return;
+  _ssoBridgeDone=true;
+  if(tokenGet()) return; // already logged in here
+  try{ if(sessionStorage.getItem("spearNoAuto")==="1") return; }catch(e){}
+  let settled=false;
+  const done=(ok)=>{ if(!settled){ settled=true; try{window.removeEventListener("message",onMsg);}catch(e){} try{fr.remove();}catch(e){} if(!ok&&typeof drawPanel==="function")try{drawPanel();}catch(e){} } };
+  const onMsg=(ev)=>{
+    if(ev.origin!==HUB) return;
+    const d=ev.data;
+    const t=(typeof d==="string")?d:(d&&(d.token||d.sso||d.xtg_token));
+    if(d&&(d.type==="xtg-sso"||typeof d==="string")&&t){
+      ssoApplyHubToken(String(t), true).then(()=>done(true)).catch(()=>done(false));
+    } else if(d&&d.type==="xtg-sso"){
+      done(false); // hub answered: not logged in there
+    }
+  };
+  window.addEventListener("message",onMsg);
+  const fr=document.createElement("iframe");
+  fr.setAttribute("aria-hidden","true"); fr.tabIndex=-1;
+  fr.style.cssText="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:0";
+  fr.src=HUB+"/sso-bridge.html";
+  fr.onerror=()=>done(false);
+  document.body.appendChild(fr);
+  setTimeout(()=>done(false), 4000); // bridge missing/blocked: stay guest
+}
+// Re-sync premium without another click: the hub approval may land after
+// the game login. Re-verify the stored hub token once per load.
+let _ssoRefreshed=false;
+async function ssoRefreshPremium(){
+  if(_ssoRefreshed) return;
+  _ssoRefreshed=true;
+  const ht=hubTokenGet();
+  if(!ht||!tokenGet()) return;
+  try{
+    const r=await apiReq("/api/sso",{token:ht});
+    if(r&&r.ok){ const gained=!ME?.premium&&r.me.premium; tokenSet(r.token); ME=r.me; render();
+      if(gained){ log(`👑 <b>Premium active!</b> The Golden Godskin is FREE in the clothing shop — just press Wear!`); }
+      if(typeof drawPanel==="function")try{drawPanel();}catch(e){} }
+  }catch(e){ /* offline: keep cached premium, fail open */ }
+}
+accRefresh().then(()=>ssoRefreshPremium()).catch(()=>{});
+ssoLogin().then((ok)=>{ if(!ok&&!tokenGet()) ssoBridgeAuto(); });
 })();
 </script>
 </body>

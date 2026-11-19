@@ -198,11 +198,26 @@ def call_me(token):
 s, r = call_me(first_tok)
 assert s == 200 and r["me"]["user"] == "HubHero", (s, r)
 
-# 8. Godskin data present and premium-gated
+# 8. Godskin data present and premium-gated, no codes: premium SSO players
+# get a FREE Wear button, never a code/redeem screen.
 import re
 src = Path(__file__).resolve().parent.parent.joinpath("index.html").read_text()
 assert '"👑 Golden Godskin' in src, "godskin missing from shop"
 assert "TUNIC" in src and "#eab308" in src, "godskin tunic color missing"
 assert src.count("premium") >= 3, "premium gating missing"
+assert "Wear FREE" in src, "premium godskin must have a FREE Wear button"
+assert "redeem" not in src.lower().replace("no codes, no redeem screens", ""), "no code/redeem screens for SSO premium"
+
+# 9. Hub auto-login: one hub login logs into the game with no extra click.
+# ?sso= is consumed and verified server-side; direct visits silently pull
+# the hub token via the bridge iframe; the hub token is kept for premium
+# re-sync so skins unlock automatically.
+assert "sso-bridge" in src, "bridge iframe for hub auto-login missing"
+assert "ssoBridgeAuto" in src, "auto-login routine missing"
+assert "postMessage" in src or "addEventListener(\"message\"" in src or 'addEventListener("message"' in src, "bridge listener missing"
+assert "spearHubToken" in src, "stored hub token for premium re-sync missing"
+assert "ssoRefreshPremium" in src, "premium re-sync missing"
+assert "ssoApplyHubToken" in src, "shared SSO verify path missing"
+assert "/api/sso" in src, "server-side SSO verify missing"
 
 print("sso OK")
