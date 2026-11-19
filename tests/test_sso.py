@@ -220,4 +220,15 @@ assert "ssoRefreshPremium" in src, "premium re-sync missing"
 assert "ssoApplyHubToken" in src, "shared SSO verify path missing"
 assert "/api/sso" in src, "server-side SSO verify missing"
 
+# 10. Single hunter, no "new hunters": the multi-hunter profile system is
+# gone — one save slot, one leaderboard of every player's best run.
+assert "profileRow" not in src, "profile switcher row must go"
+assert "newProfile" not in src, "new-hunter flow must go"
+assert "switchProfile" not in src, "profile switching must go"
+assert "deleteProfile" not in src, "profile deletion must go"
+assert "profbtn" not in src, "profile buttons must go"
+assert "STORE.profiles" not in src, "multi-hunter store must go"
+assert "loadSingle" in src and "spearUpgradeSave" in src, "single save slot missing"
+assert "LEADERBOARD" in src and "globBoard" in src, "best-run leaderboard missing"
+
 print("sso OK")
