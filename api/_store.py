@@ -206,7 +206,8 @@ def _b64d(s):
 
 def public_profile(user, acct):
     return {"user": user,
-            "runs": acct.get("runs", 0), "best": acct.get("best", 0)}
+            "runs": acct.get("runs", 0), "best": acct.get("best", 0),
+            "premium": 1 if acct.get("premium") else 0}
 
 
 def mint_token(user, tv=0):
