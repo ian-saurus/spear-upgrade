@@ -1014,7 +1014,7 @@ async function ssoLogin(){
   let m=null;
   try{ m=/[?&]sso=([^&]+)/.exec(location.search); }catch(e){}
   if(!m) return;
-  try{ history.replaceState(null, location.pathname, location.href); }catch(e){}
+  try{ const u=new URL(location.href); u.searchParams.delete("sso"); history.replaceState(null, "", u.pathname+u.search+u.hash); }catch(e){}
   try{
     const r=await apiReq("/api/sso",{token:decodeURIComponent(m[1])});
     if(r&&r.ok){ tokenSet(r.token); ME=r.me; acctDraft={u:"",p:"",err:""}; log(`👋 Welcome, <b>${ME.user}</b>! Logged in with XtremeGaming${ME.premium?" 👑 Premium skins unlocked!":""}.`); render(); if(typeof drawPanel==="function")try{drawPanel();}catch(e){} }
