@@ -1019,7 +1019,7 @@ async function ssoLogin(){
     const r=await apiReq("/api/sso",{token:decodeURIComponent(m[1])});
     if(r&&r.ok){ tokenSet(r.token); ME=r.me; acctDraft={u:"",p:"",err:""}; log(`👋 Welcome, <b>${ME.user}</b>! Logged in with XtremeGaming${ME.premium?" 👑 Premium skins unlocked!":""}.`); render(); if(typeof drawPanel==="function")try{drawPanel();}catch(e){} }
     else { log("XtremeGaming login didn't work — try again."); }
-  }catch(e){ log("XtremeGaming login failed — hub unreachable?"); }
+  }catch(e){ const m=String((e&&e.message)||""); log(m==="bad sso token"?"XtremeGaming login didn't work — try again.":/Failed to fetch|NetworkError|network|fetch/i.test(m)?"XtremeGaming login failed — hub unreachable?":"XtremeGaming login failed ("+m+")."); }
 }
 ssoLogin();
 })();
