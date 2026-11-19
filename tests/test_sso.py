@@ -19,6 +19,10 @@ os.environ["SPEAR_TEST_DIR"] = tempfile.mkdtemp(prefix="spear-sso-")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "api"))
 import sso as sso_mod
 
+# The test client must always use the REAL urlopen, even when we stub it
+# for the server-side hub_check. Capture it once, up front.
+_real_urlopen_for_client = urllib.request.urlopen
+
 
 def fake_hub_ok(token):
     if token == "good-premium-token":
@@ -30,6 +34,7 @@ def fake_hub_ok(token):
     return {"ok": False, "err": "bad sso token"}
 
 
+_real_hub_check = dict(vars(sso_mod)).get("hub_check")
 sso_mod.hub_check = fake_hub_ok
 
 
@@ -70,7 +75,7 @@ def call(body):
         "http://127.0.0.1:%d/api/sso" % PORT, data=data, method="POST",
         headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=10) as r:
+        with _real_urlopen_for_client(req, timeout=10) as r:
             return r.status, json.loads(r.read() or b"null")
     except urllib.error.HTTPError as e:
         return e.code, json.loads(e.read() or b"null")
@@ -112,6 +117,38 @@ s, r = call({"token": "nope"})
 assert s == 401 and not r.get("ok"), (s, r)
 s, r = call({})
 assert s == 401, (s, r)
+s, r = call({"token": ""})
+assert s == 401, (s, r)
+
+# 5b. hub answers 401-with-JSON (real hub behavior for bad tokens):
+# the real hub_check must surface the verdict, not raise.
+import urllib.error as _ue
+import io as _io
+import urllib.request as _urllib_request
+_real_urlopen = _urllib_request.urlopen
+def fake_urlopen_401(req, timeout=None):
+    raise _ue.HTTPError(str(req.full_url), 401, "Unauthorized", {},
+                        _io.BytesIO(b'{"ok": false, "err": "bad token"}'))
+_urllib_request.urlopen = fake_urlopen_401
+sso_mod.hub_check = _real_hub_check
+try:
+    heard = sso_mod.hub_check("whatever-token")
+finally:
+    _urllib_request.urlopen = _real_urlopen
+    sso_mod.hub_check = fake_hub_ok
+assert heard == {"ok": False, "err": "bad token"}, heard
+
+# 5c. end-to-end through the handler with the real hub_check reading
+# a 401-with-JSON hub answer (proves the fix: real 401 verdict, not 503)
+sso_mod.hub_check = _real_hub_check
+_urllib_request.urlopen = fake_urlopen_401
+try:
+    s, r = call({"token": "whatever"})
+finally:
+    _urllib_request.urlopen = _real_urlopen
+    sso_mod.hub_check = fake_hub_ok
+assert s == 401 and not r.get("ok"), (s, r)
+assert r.get("err") == "bad sso token", r
 
 # 6. hub outage -> 503, not logged in
 def fake_hub_down(token):

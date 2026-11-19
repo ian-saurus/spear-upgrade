@@ -19,10 +19,21 @@ HUB = os.environ.get("HUB_ORIGIN", "https://xtremegaming.vercel.app").rstrip("/"
 
 
 def hub_check(token):
+    import urllib.error
     url = HUB + "/api/sso/session?token=" + urllib.parse.quote(token, safe="")
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=10) as r:
-        return json.loads(r.read() or b"null")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return json.loads(r.read() or b"null")
+    except urllib.error.HTTPError as e:
+        # Hub answered but rejected the token (e.g. 401) — still a usable
+        # verdict, not a transport failure. Parse the body if we can.
+        try:
+            return json.loads(e.read() or b"null")
+        except (ValueError, OSError):
+            return {"ok": False, "err": "bad sso token"}
+    except Exception:
+        return None
 
 
 class handler(BaseHTTPRequestHandler):
