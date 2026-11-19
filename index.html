@@ -918,7 +918,7 @@ function drawPanel(){
     CLOTHES.forEach((c,i)=>{
       const r=document.createElement("div"); r.className="row";
       const prem=c.premium?((ME&&ME.premium)?2:1):0;
-      r.innerHTML=`<div>${i<=S.cloth?"✅":prem===1?"👑":"🔒"} <b>${c.name}</b> <small>${c.def} def${c.cost?` · costs 🦴${c.cost}`:" · keeps you from freezing only"}${c.fam?` · fools: ${c.fam}`:""}${prem===1?" · <b>hub premium only</b>":""}</small></div>`;
+      r.innerHTML=`<div>${i<=S.cloth?"✅":prem===1?"👑":"🔒"} <b>${c.name}</b> <small>${c.def} def${c.cost?` · costs 🦴${c.cost}`:prem===1?" · <b>FREE</b>":" · keeps you from freezing only"}${c.fam?` · fools: ${c.fam}`:""}${prem===1?" · <b>hub premium only</b>":""}</small></div>`;
       if(prem===1){
         const s=document.createElement("span"); s.textContent="👑 Log in on XtremeGaming to unlock"; r.appendChild(s);
       } else if(i===S.cloth+1&&!prem){ const b=document.createElement("button"); b.className="btn craft"; b.textContent=`Sew 🦴${c.cost}`; b.disabled=S.skins<c.cost;
